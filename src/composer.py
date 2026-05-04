@@ -404,9 +404,10 @@ Translate "Style + Theme" into a professional music specification.
         5. SYNCOPATION: Implement off-beat hi-hats and syncopated percussion hits to create complex rhythmic pockets.
         
         ARRANGEMENT & DYNAMICS:
-        6. TENSION & RELEASE: Masterful use of energy. Build massive tension using Risers and fast arpeggios. Release the tension into devastating, high-energy drops where the Sub-Bass and Kick hit with maximum impact.
-        7. STAGGERED ENTRIES: Do not start all instruments at once. Introduce elements sequentially (Intro -> Build -> Drop -> Breakdown -> Climax -> Outro).
-        8. CADENCE (CALL-AND-RESPONSE): ALTERNATE the rhythmic phrasing between lead synths and basslines (create dynamic space, avoid mud).
+        6. TRACK PRESENCE (MANDATORY): You must feature at least 3 core baseline instruments. The Sub-Bass, Beat, and Industrial_Claps tracks MUST be active for at least 90% of the song. All other secondary instruments MUST be active for at least 40% of the song.
+        7. TENSION & RELEASE: Masterful use of energy. Build massive tension using Risers and fast arpeggios. Release the tension into devastating, high-energy drops where the Sub-Bass and Kick hit with maximum impact.
+        8. STAGGERED ENTRIES: Do not start all instruments at once. Introduce elements sequentially (Intro -> Build -> Drop -> Breakdown -> Climax -> Outro).
+        9. CADENCE (CALL-AND-RESPONSE): ALTERNATE the rhythmic phrasing between lead synths and basslines (create dynamic space, avoid mud).
         
         FREQUENCY SPREAD & SOUND DESIGN:
         9. THE LOW END: Ensure the Sub-Bass is strictly isolated in the lowest octaves. It must pulse with the Kick.
