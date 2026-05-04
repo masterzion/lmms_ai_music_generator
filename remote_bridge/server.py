@@ -265,7 +265,10 @@ async def generate_full_composition(request: FullCompositionRequest):
     tracks = {}
     
     # 3. GENERATE ALL TRACKS AT ONCE
-    is_future_pop = "future pop" in request.prompt.lower()
+    prompt_lower = request.prompt.lower()
+    is_future_pop = "future pop" in prompt_lower
+    is_chillout = any(k in prompt_lower for k in ["chill", "ambient", "relax", "downtempo"])
+    
     if is_future_pop:
         song_structure = [
             {"section": "Intro", "bars": 8},
@@ -278,6 +281,14 @@ async def generate_full_composition(request: FullCompositionRequest):
             {"section": "Bridge", "bars": 16},
             {"section": "Final Chorus", "bars": 32},
             {"section": "Outro", "bars": 16}
+        ]
+    elif is_chillout:
+        song_structure = [
+            {"section": "Establishment (Intro)", "bars": 32},
+            {"section": "Development (Groove)", "bars": 32},
+            {"section": "Expansion (Peak)", "bars": 32},
+            {"section": "Contraction (Breakdown)", "bars": 32},
+            {"section": "Resolution (Outro)", "bars": 32}
         ]
     else:
         # Default to Linear EBM Structure (5 Massive Phases)
