@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any, List
 from .schema import Composition, Track
 
 class Composer:
-    def __init__(self, model_name: str = "llama3:8b", api_url: str = "http://192.168.2.188:11434/api/generate"):
+    def __init__(self, model_name: str = "qwen2.5:7b", api_url: str = "http://192.168.2.188:11434/api/generate"):
         self.model_name = model_name
         self.api_url = api_url
         self.system_prompt = """You are an Elite AI Music Producer. Output ONLY valid JSON. 

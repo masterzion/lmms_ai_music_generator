@@ -231,7 +231,7 @@ Task: Design the musical theory foundation for: {request.prompt}
         response = requests.post(
             "http://127.0.0.1:11434/api/generate",
             json={
-                "model": "llama3:8b",
+                "model": "qwen2.5:7b",
                 "prompt": thought_prompt,
                 "system": request.system_prompt,
                 "stream": False
@@ -307,7 +307,7 @@ User request: {request.prompt}
         ollama_response = requests.post(
             "http://127.0.0.1:11434/api/generate",
             json={
-                "model": "llama3:8b",
+                "model": "qwen2.5:7b",
                 "prompt": thought_prompt,
                 "system": request.system_prompt,
                 "stream": False,

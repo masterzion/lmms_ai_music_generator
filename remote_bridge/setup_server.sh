@@ -53,6 +53,14 @@ pip install --pre torchvision torchaudio --index-url https://download.pytorch.or
 echo "Installing API and utility dependencies..."
 pip install -r requirements.txt
 
+# 5. Ensure LLM is available (Ollama)
+if command -v ollama >/dev/null 2>&1; then
+    echo "Ollama detected. Pulling Qwen 2.5 7B (Optimized for JSON generation)..."
+    ollama pull qwen2.5:7b
+else
+    echo "Notice: Ollama not found. Please install Ollama on the server to enable AI Deep Thinking."
+fi
+
 # 5. Download ACE-Step Weights
 MODEL_URL="https://huggingface.co/ACE-Step/Ace-Step1.5/resolve/main/acestep-v15-turbo/model.safetensors"
 MODEL_FILE="model.safetensors"
