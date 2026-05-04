@@ -291,7 +291,8 @@ Task: Design the musical theory foundation for: {request.prompt}
         print(f"ACE-Step: Deep Research failed, falling back to math: {e}")
     
     # Fallback math if LLM fails
-    bpm = random.randint(80, 100) if is_chill else (random.randint(128, 145) if is_fast := (is_ebm or is_future) else 120)
+    is_fast = is_ebm or is_future
+    bpm = random.randint(80, 100) if is_chill else (random.randint(128, 145) if is_fast else 120)
     theory = {
         "bpm": bpm, "scale": "minor", "intervals": [0, 2, 3, 5, 7, 8, 10], "root_midi": 48,
         "genre_notes": "Fallback math theory.", "title": "Fallback", "folder": "fallback"
