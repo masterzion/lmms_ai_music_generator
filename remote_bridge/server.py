@@ -204,34 +204,70 @@ class ResearchRequest(BaseModel):
 
 @app.post("/research_theory")
 async def research_theory(request: ResearchRequest):
-    """Secondary Director: Suggests theory based on concept."""
-    print(f"ACE-Step: Researching theory for '{request.prompt}'...")
+    """Secondary Director: Suggests theory based on concept using Deep Thinking."""
+    print(f"ACE-Step: Deep Researching theory for '{request.prompt}'...")
     
     prompt_lower = request.prompt.lower()
     is_chill = "<chillout>" in prompt_lower
-    is_fast = "<ebm>" in prompt_lower or "<future pop>" in prompt_lower
+    is_future = "<future pop>" in prompt_lower
+    is_ebm = "<ebm>" in prompt_lower
     
-    bpm = random.randint(80, 100) if is_chill else (random.randint(128, 145) if is_fast else 120)
+    recom_bpm = "80-100" if is_chill else ("128-140" if is_future else ("135-155" if is_ebm else "120"))
+    recom_scale = "Dorian or Phrygian" if (is_ebm or is_future) else "Minor or Major"
+
+    thought_prompt = f"""{request.system_prompt}
     
-    scales = {
-        "minor": [0, 2, 3, 5, 7, 8, 10],
-        "phrygian": [0, 1, 3, 5, 7, 8, 10],
-        "dorian": [0, 2, 3, 5, 7, 9, 10],
-        "major": [0, 2, 4, 5, 7, 9, 11]
-    }
-    scale_name = random.choice(list(scales.keys()))
+<think>
+Genre: {prompt_lower}
+Recommendations: BPM {recom_bpm}, Scale {recom_scale}.
+Determine the exact BPM, Scale name, Root MIDI (36, 48, or 60), and 7-interval list.
+Return ONLY JSON.
+</think>
+
+Task: Design the musical theory foundation for: {request.prompt}
+"""
     
+    try:
+        response = requests.post(
+            "http://127.0.0.1:11434/api/generate",
+            json={
+                "model": "llama3:8b",
+                "prompt": thought_prompt,
+                "system": request.system_prompt,
+                "stream": False
+            },
+            timeout=300
+        )
+        raw_output = response.json().get("response", "")
+        json_match = re.search(r'\{.*\}', raw_output, re.DOTALL)
+        if json_match:
+            data = json.loads(json_match.group(0))
+            # Support both flat and nested meta
+            bpm = data.get("bpm") or data.get("meta", {}).get("bpm", 120)
+            scale = data.get("scale") or data.get("meta", {}).get("scale", "minor")
+            intervals = data.get("intervals") or data.get("meta", {}).get("intervals", [0, 2, 3, 5, 7, 8, 10])
+            root_midi = data.get("root_midi") or data.get("meta", {}).get("root_midi", 48)
+            
+            theory = {
+                "bpm": bpm,
+                "scale": scale,
+                "intervals": intervals,
+                "root_midi": root_midi,
+                "genre_notes": f"LLM Optimized {scale} at {bpm} BPM.",
+                "title": f"Deep_Theory_{random.randint(100, 999)}",
+                "folder": "deep_theory"
+            }
+            print(f"ACE-Step: Theory Research Complete. Decided: {bpm} BPM, {scale}")
+            return theory
+    except Exception as e:
+        print(f"ACE-Step: Deep Research failed, falling back to math: {e}")
+    
+    # Fallback math if LLM fails
+    bpm = random.randint(80, 100) if is_chill else (random.randint(128, 145) if is_fast := (is_ebm or is_future) else 120)
     theory = {
-        "bpm": bpm,
-        "scale": scale_name,
-        "intervals": scales[scale_name],
-        "root_midi": random.choice([36, 48, 60]),
-        "genre_notes": f"ACE-Step optimized {scale_name} foundation.",
-        "title": f"Bridge_Production_{random.randint(1000, 9999)}",
-        "folder": "bridge_output"
+        "bpm": bpm, "scale": "minor", "intervals": [0, 2, 3, 5, 7, 8, 10], "root_midi": 48,
+        "genre_notes": "Fallback math theory.", "title": "Fallback", "folder": "fallback"
     }
-    
-    print(f"ACE-Step: Theory decided. {bpm} BPM, {scale_name}")
     return theory
 
 class FullCompositionRequest(BaseModel):
