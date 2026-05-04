@@ -407,6 +407,33 @@ async def render_wav(file: UploadFile = File(...)):
     # Save the uploaded file
     with open(midi_file, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
+        
+    # --- FINAL PRODUCTION AUDIT ---
+    import mido
+    print("ACE-Step: Executing FINAL PRODUCTION AUDIT on uploaded MIDI...")
+    try:
+        audit_mid = mido.MidiFile(midi_file)
+        silent_tracks = []
+        for track in audit_mid.tracks:
+            track_name = track.name if track.name else "Unknown"
+            # Count actual note_on events with velocity > 0
+            note_count = sum(1 for msg in track if msg.type == 'note_on' and msg.velocity > 0)
+            
+            # We ignore meta tracks or empty nameless tracks
+            if note_count == 0 and track_name.lower() not in ["", "unknown", "control track"]:
+                silent_tracks.append(track_name)
+                
+        if silent_tracks:
+            error_msg = f"FINAL PRODUCTION AUDIT FAILED: The following tracks generated 0 notes: {', '.join(silent_tracks)}. You MUST generate active note data for them."
+            print(f"ACE-Step: {error_msg}")
+            os.remove(midi_file) # Clean up
+            raise HTTPException(status_code=406, detail=error_msg)
+            
+        print("ACE-Step: Audit PASSED. All tracks contain note data.")
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"ACE-Step: Warning during audit (ignoring): {e}")
     
     # Run FluidSynth via Podman
     import subprocess

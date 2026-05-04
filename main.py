@@ -69,26 +69,41 @@ def main():
             print(f"\n[QA AGENT] WARNING: Max retries ({max_retries}) reached. Proceeding with silent tracks.\n")
             break
         else:
-            print(f"\n[QA AGENT] PASSED: All {len(midi_data.instruments)} tracks are fully active.\n")
-            break
-        
-    # --- ENFORCE HIERARCHY: [genre]/[topic]/[title].mid ---
-    def clean(s): return "".join(c for c in s if c.isalnum() or c in (' ', '_', '/')).replace(' ', '_').lower()
-    
-    safe_genre = clean(composition.meta.genre)
-    safe_topic = clean(composition.meta.folder)
-    safe_title = clean(composition.meta.title)
-    
-    # Build strict path
-    final_dir = os.path.join(base_output, safe_genre, safe_topic)
-    os.makedirs(final_dir, exist_ok=True)
-    final_path = os.path.join(final_dir, f"{safe_title}.mid")
-    
-    midi_data.write(final_path)
-    print(f"Success! Song archived at: {final_path}")
-    
-    if args.render:
-        composer.render_to_audio(final_path)
+            print(f"\n[LOCAL QA] PASSED: All {len(midi_data.instruments)} tracks are fully active.\n")
+            
+            # --- ENFORCE HIERARCHY: [genre]/[topic]/[title].mid ---
+            def clean(s): return "".join(c for c in s if c.isalnum() or c in (' ', '_', '/')).replace(' ', '_').lower()
+            
+            safe_genre = clean(composition.meta.genre)
+            safe_topic = clean(composition.meta.folder)
+            safe_title = clean(composition.meta.title)
+            
+            # Build strict path
+            final_dir = os.path.join(base_output, safe_genre, safe_topic)
+            os.makedirs(final_dir, exist_ok=True)
+            final_path = os.path.join(final_dir, f"{safe_title}_attempt{current_attempt}.mid")
+            
+            midi_data.write(final_path)
+            print(f"Success! Song archived at: {final_path}")
+            
+            if args.render:
+                try:
+                    composer.render_to_audio(final_path)
+                    print(f"\n[SERVER QA] PASSED: Remote audit and rendering successful.\n")
+                    break
+                except Exception as e:
+                    error_str = str(e)
+                    if "FINAL PRODUCTION AUDIT FAILED" in error_str and current_attempt < max_retries:
+                        print(f"\n[SERVER QA] REJECTED BY BRIDGE: {error_str}")
+                        print(f"[SERVER QA] Auto-correcting and maintaining context for Attempt {current_attempt + 1}...\n")
+                        active_prompt = f"{full_concept}\n\nSERVER QA FEEDBACK (DO NOT REPEAT MISTAKE):\nThe rendering server rejected the previous MIDI file with this error: {error_str}. You MUST fix this."
+                        current_attempt += 1
+                        continue
+                    else:
+                        print(f"\n[SERVER QA] ERROR or Max Retries Reached: {error_str}")
+                        break
+            else:
+                break
 
 if __name__ == "__main__":
     main()

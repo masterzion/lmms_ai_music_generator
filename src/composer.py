@@ -439,11 +439,16 @@ Translate "Style + Theme" into a professional music specification.
                 response = requests.post(bridge_url, files=files, timeout=600)
             
             if response.status_code == 200:
-                wav_path = midi_path.replace(".mid", ".wav")
-                with open(wav_path, "wb") as f:
+                out_path = midi_path.replace(".mid", ".wav")
+                with open(out_path, "wb") as f:
                     f.write(response.content)
-                print(f"Success! Master WAV produced at: {wav_path}")
+                print(f"--- SUCCESS: Remote rendering complete. Saved to: {out_path} ---")
+                return True
             else:
-                print(f"Rendering failed: {response.text}")
+                error_detail = response.json().get("detail", response.text)
+                print(f"Server rejected rendering: {error_detail}")
+                raise Exception(error_detail)
+                
         except Exception as e:
-            print(f"Rendering connection failed: {e}")
+            print(f"Failed to connect to rendering bridge: {e}")
+            raise e
