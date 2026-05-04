@@ -259,21 +259,26 @@ async def generate_full_composition(request: FullCompositionRequest):
     total_steps = total_bars * steps_per_bar
     
     for i, name in enumerate(track_names):
-        is_drum = any(k in name.lower() for k in ["drum", "kick", "perc", "808", "beat"])
+        name_l = name.lower()
+        is_drum = any(k in name_l for k in ["drum", "kick", "perc", "808", "beat", "clap"])
+        is_bass = any(k in name_l for k in ["bass", "acid", "sub"])
         motif_len = 4 if is_drum else 8
         
-        # CADENCE LOGIC: Shift the starting point for non-drum instruments
-        # This creates the "Alternating" feel
-        offset = 0 if is_drum else (i % 4) * 2
+        # CADENCE LOGIC
+        offset = 0 if (is_drum or is_bass) else (i % 4) * 2
         
         # Create the Hook/Groove
         motif = []
         for _ in range(motif_len):
-            # FORCE BEATS: Drums have higher probability (0.8)
-            prob = 0.8 if is_drum else 0.5
+            # FORCE DENSITY: Drums and Bass are the EBM backbone (0.8-0.9 density)
+            prob = 0.9 if (is_drum or is_bass) else 0.4
             if random.random() < prob:
                 if is_drum:
-                    motif.append(random.choice([36, 38, 42])) # Kick, Snare, Hat
+                    # Extended Industrial Mapping: Kick(36), Snare(38), Claps(39), OpenHat(42)
+                    motif.append(random.choice([36, 38, 39, 40, 42])) 
+                elif is_bass:
+                    # Force Bass to lowest octave for EBM "Chug"
+                    motif.append(root_midi - 12 + random.choice(intervals[:3]))
                 else:
                     motif.append(root_midi + random.choice(intervals))
             else:
