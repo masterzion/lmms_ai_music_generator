@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Dict, Optional
@@ -310,6 +310,13 @@ async def generate_full_composition(request: FullCompositionRequest):
 @app.post("/render_wav")
 async def render_wav(request: Request):
     """Renders the last generated MIDI into a high-quality WAV."""
+    import shutil
+    if not shutil.which("fluidsynth"):
+        raise HTTPException(
+            status_code=501, 
+            detail="FluidSynth not found. WAV rendering is not available on this server without system-level installation."
+        )
+
     print("ACE-Step: Rendering MIDI to WAV (Hi-Fi mode)...")
     midi_file = "ace_step_output.mid"
     wav_file = "ace_step_output.wav"

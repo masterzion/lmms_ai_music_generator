@@ -6,3 +6,5 @@ venv/
 server.log
 __pycache__/
 .DS_Store
+model.safetensors
+soundfonts/

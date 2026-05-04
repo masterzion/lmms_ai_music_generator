@@ -80,13 +80,22 @@ echo "--- Setup Complete ---"
 echo "To start the server on Steam Deck, run:"
 echo "export HSA_OVERRIDE_GFX_VERSION=10.3.0 && source venv/bin/activate && python server.py"
 
-# 7. --- AUDIO RENDERING ENGINE (NEW) ---
-echo "--- Installing Audio Rendering Engine (FluidSynth) ---"
-# Note: You may need to run 'sudo steamos-readonly disable' first on Steam Deck
-sudo pacman -S --noconfirm fluidsynth hwdata
+# 7. --- AUDIO RENDERING ENGINE (OPTIONAL) ---
+echo "--- Checking for Audio Rendering Engine (FluidSynth) ---"
+if command -v fluidsynth >/dev/null 2>&1; then
+    echo "FluidSynth is already installed in the system."
+else
+    echo "Notice: FluidSynth not found. WAV rendering will be disabled."
+    echo "To enable it without root, you would need a user-space installation or flatpak."
+fi
 
-echo "Downloading High-Fidelity SoundFont (FluidR3_GM)..."
+echo "Checking for High-Fidelity SoundFont (FluidR3_GM)..."
 mkdir -p soundfonts
-wget -c -O soundfonts/FluidR3_GM.sf2 https://github.com/uraymeivreg/FluidR3_GM/raw/master/FluidR3_GM.sf2
+if [ ! -f "soundfonts/FluidR3_GM.sf2" ]; then
+    echo "Downloading FluidR3_GM.sf2..."
+    wget -c -L -O soundfonts/FluidR3_GM.sf2 "https://github.com/urish/cinto/raw/master/media/FluidR3%20GM.sf2"
+else
+    echo "SoundFont already exists."
+fi
 
-echo "Setup Complete! ROCm and Audio Rendering are ready."
+echo "Setup Complete! ROCm is ready. Audio Rendering is optional."

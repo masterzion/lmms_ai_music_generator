@@ -5,3 +5,7 @@ pydantic
 mido
 requests
 safetensors
+# PyTorch with ROCm support (installed via setup_server.sh)
+# torch
+# torchvision
+# torchaudio
