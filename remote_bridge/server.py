@@ -280,12 +280,13 @@ async def generate_full_composition(request: FullCompositionRequest):
             {"section": "Outro", "bars": 16}
         ]
     else:
+        # Default to Linear EBM Structure (5 Massive Phases)
         song_structure = [
-            {"section": "A", "bars": 32},
-            {"section": "B", "bars": 32},
-            {"section": "C", "bars": 32},
-            {"section": "D", "bars": 32},
-            {"section": "E", "bars": 32}
+            {"section": "The Intro Phase", "bars": 32},
+            {"section": "The Build Phase", "bars": 32},
+            {"section": "The Core Groove", "bars": 32},
+            {"section": "The Breakdown", "bars": 32},
+            {"section": "The Climax & Outro", "bars": 32}
         ]
     
     num_sections = len(song_structure)
