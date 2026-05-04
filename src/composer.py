@@ -387,24 +387,28 @@ Translate "Style + Theme" into a professional music specification.
         print(f"--- MONOLITHIC MODE: Delegating entire song to ACE-Step ---")
         bridge_url = "http://192.168.2.188:8000/generate_full_composition"
         
+        # Dynamic Genre Routing to prevent LLM Hallucination
+        req_lower = user_request.lower()
+        if "<future pop>" in req_lower:
+            genre_name = "Future Pop"
+            track_limits = "12 to 24 tracks (dense, highly layered, commercial pop production)."
+        elif "<chillout>" in req_lower:
+            genre_name = "Chillout/Ambient"
+            track_limits = "6 to 12 tracks (minimalist, spacious, and atmospheric)."
+        else:
+            # Default fallback if no tag or <ebm>
+            genre_name = "Electronic Body Music (EBM)"
+            track_limits = "8 to 14 tracks (focused, driving, and powerful)."
+            
         # Build the Polished Professional Master Prompt
         master_prompt = f"""
         PRODUCE A HIGH-FIDELITY, PROFESSIONAL-GRADE MASTER COMPOSITION FOR: "{user_request}"
         
-        You are an elite, multi-platinum music producer and audio engineer.
-        
-        GENRE ROUTING SYSTEM (MANDATORY):
-        The user request MUST be interpreted under one of the following exact genre tags. 
-        Ensure your musical choices (scales, rhythms, motifs) align with the requested tag:
-        - <ebm> (Aggressive, relentless, 4-on-the-floor industrial dance)
-        - <future pop> (High-energy, melodic, structured verse/chorus club pop)
-        - <chillout> (Atmospheric, evolving, downtempo ambient soundscapes)
+        You are an elite, multi-platinum {genre_name} music producer and audio engineer.
         
         FOUNDATIONAL STUDIO RULES:
-        1. ORCHESTRATION (TRACK COUNT): You must strictly adhere to these track limits based on your chosen genre tag:
-           - <ebm>: 8 to 14 tracks (focused, driving, and powerful).
-           - <future pop>: 12 to 24 tracks (dense, highly layered, commercial pop production).
-           - <chillout>: 6 to 12 tracks (minimalist, spacious, and atmospheric).
+        1. ORCHESTRATION (TRACK COUNT): You must strictly adhere to this track limit for your genre:
+           - {track_limits}
            All generated tracks must be ACTIVE. MANDATORY: Every single instrument MUST generate notes. 0-note (muted) tracks are STRICTLY FORBIDDEN.
         2. PERCUSSION: You must provide a dedicated 'Beat' (Kicks/Snares) and 'Industrial_Claps' track.
         
