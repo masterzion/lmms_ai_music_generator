@@ -393,9 +393,11 @@ Translate "Style + Theme" into a professional music specification.
         
         FOUNDATIONAL RULES:
         1. DURATION: Minimum 4 minutes.
-        2. ORCHESTRATION: Minimum 10 instruments.
-        3. RHYTHM: FORCE a driving, consistent beat foundation.
-        4. CADENCE: ALTERNATE the rhythmic phrasing between instruments (Ensuring they don't all play at once; create dynamic space).
+        2. ORCHESTRATION: Exactly 10 instruments. All must be ACTIVE (No silent tracks).
+        3. PERCUSSION: MANDATORY dedicated 'Beat' and 'Clap' tracks tailored to the musical style.
+        4. RHYTHM: FORCE a driving, consistent beat foundation.
+        5. CADENCE: ALTERNATE the rhythmic phrasing between instruments (Ensuring they don't all play at once; create dynamic space).
+        6. ARRANGEMENT: Implement logical STARTING and STOPPING. Ensure smooth TRANSITIONS and logical energy shifts between sections.
         
         Let the music flow. Output ONLY the JSON.
         """

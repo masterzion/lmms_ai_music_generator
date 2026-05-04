@@ -25,11 +25,14 @@ class SequencerEngine:
         self.step_duration = 60.0 / self.comp.meta.bpm / 4.0  # 16th notes
         
     def _humanize_note(self, midi_note: int, start: float, duration: float, velocity: int) -> pretty_midi.Note:
-        """Adds subtle timing and velocity variations."""
+        """Adds subtle timing and velocity variations + MIDI safety clamp."""
+        # Safety Guard: Ensure note is in valid 0-127 range
+        safe_note = max(0, min(127, int(midi_note)))
+        
         offset = np.random.uniform(-0.005, 0.005) # +/- 5ms
         human_start = max(0, start + offset)
         human_vel = int(np.clip(velocity + np.random.randint(-10, 10), 1, 127))
-        return pretty_midi.Note(human_vel, midi_note, human_start, human_start + duration)
+        return pretty_midi.Note(human_vel, safe_note, human_start, human_start + duration)
 
     def generate(self) -> pretty_midi.PrettyMIDI:
         print(f"--- Starting MIDI Generation (BPM: {self.comp.meta.bpm}) ---")
