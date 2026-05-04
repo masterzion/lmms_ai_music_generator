@@ -277,10 +277,12 @@ async def generate_full_composition(request: FullCompositionRequest):
                     # Extended Industrial Mapping: Kick(36), Snare(38), Claps(39), OpenHat(42)
                     motif.append(random.choice([36, 38, 39, 40, 42])) 
                 elif is_bass:
-                    # Force Bass to lowest octave for EBM "Chug"
-                    motif.append(root_midi - 12 + random.choice(intervals[:3]))
+                    # Force Bass to lowest octave for EBM "Chug" + Safety Clamp
+                    val = root_midi - 12 + random.choice(intervals[:3])
+                    motif.append(max(0, min(127, val)))
                 else:
-                    motif.append(root_midi + random.choice(intervals))
+                    val = root_midi + random.choice(intervals)
+                    motif.append(max(0, min(127, val)))
             else:
                 motif.append(-1)
         
