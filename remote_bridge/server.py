@@ -22,8 +22,10 @@ app = FastAPI(title="ACE-Step Remote Bridge (Steam Deck Optimized)")
 class PatternRequest(BaseModel):
     prompt: str
     length: int = 16
-    genre: str = "EBM"
+    genre: str = "Electronic"
     energy: float = 0.8
+    root_midi: int = 60
+    intervals: List[int]
 
 class PatternResponse(BaseModel):
     pattern: List[int]
@@ -117,27 +119,64 @@ def create_midi(pattern: List[int], filename: str = "output.mid"):
 
 @app.post("/generate_pattern")
 async def generate_pattern(request: PatternRequest):
-    # Use inference mode and autocast to save VRAM
-    with torch.inference_mode(), torch.amp.autocast(device_type=device, dtype=dtype):
+    # Use inference mode to save VRAM
+    with torch.inference_mode():
         try:
-            print(f"Generating optimized {request.genre} motif (Energy: {request.energy})...")
+            print(f"ACE-Step: Recording '{request.prompt}' ({request.genre}) | Root: {request.root_midi}")
             steps = request.length
             pattern = [-1] * steps
-            num_notes = int(steps * request.energy)
-            indices = np.linspace(0, steps-1, num_notes, dtype=int)
-            for idx in indices:
-                pattern[idx] = np.random.choice([0, 0, 3, 5, 7, 12])
             
-            # --- ACE-STEP ARRANGEMENT LOGIC (Pro Vibe) ---
-            # Define Start/Stop schedule based on energy and randomness
-            all_sections = [0, 1, 2, 3, 4, 5, 6, 7] # Support up to 8 sections
-            num_active = int(len(all_sections) * request.energy)
-            num_active = max(1, min(len(all_sections), num_active)) # Clamp
+            # Determine density based on energy and instrument type
+            is_drum = any(k in request.prompt.lower() for k in ["drum", "kick", "perc", "snare", "hat", "clap"])
+            density = request.energy if not is_drum else min(0.95, request.energy + 0.1)
             
-            # Randomly pick which sections this track plays in
-            schedule = sorted(np.random.choice(all_sections, num_active, replace=False).tolist())
+            # --- MELODIC INTELLIGENCE (Pattern-Based) ---
+            motif_len = 4 if is_drum else 8
+            motif = []
             
-            print(f"Track Arrangement: Playing in {len(schedule)} sections: {schedule}")
+            # Generate a distinct 'Hook' or 'Motif'
+            for _ in range(motif_len):
+                if np.random.random() < 0.6: # 60% chance of a note
+                    if is_drum:
+                        motif.append(0)
+                    else:
+                        interval = np.random.choice(request.intervals)
+                        motif.append(interval)
+                else:
+                    motif.append(-1) # Rest
+            
+            # Tile and Humanize the motif across the full track length
+            for i in range(steps):
+                m_idx = i % motif_len
+                if motif[m_idx] != -1:
+                    # 90% chance to play the motif note, creating 'Musical Variation'
+                    if np.random.random() < 0.9:
+                        if is_drum:
+                            pattern[i] = 0
+                        else:
+                            # Occasional octave jump for interest
+                            octave = np.random.choice([0, 12], p=[0.9, 0.1])
+                            pattern[i] = motif[m_idx] + octave
+                else:
+                    # 10% chance to 'fill' a rest for variety
+                    if np.random.random() < 0.1 and not is_drum:
+                        pattern[i] = np.random.choice(request.intervals)
+            
+            # --- PROFESSIONAL ARRANGEMENT LOGIC ---
+            all_sections = [0, 1, 2, 3, 4, 5, 6, 7]
+            if is_drum or "bass" in request.prompt.lower():
+                # Foundation tracks play almost everywhere
+                schedule = all_sections
+            elif "lead" in request.prompt.lower() or "hook" in request.prompt.lower():
+                # Leads play in peak energy sections
+                schedule = [2, 3, 5, 6]
+            else:
+                # Decorative tracks play in alternating sections
+                schedule = [i for i in all_sections if i % 2 == 1]
+            
+            if not schedule: schedule = [0, 1, 2] # Fallback
+            
+            print(f"ACE-Step: Pattern Success. Schedule: {schedule}")
             
             # Convert to MIDI
             midi_path = "ace_step_output.mid"
@@ -145,7 +184,6 @@ async def generate_pattern(request: PatternRequest):
             
             optimize_vram()
             
-            # Return MIDI file with the schedule in a custom header
             return FileResponse(
                 path=midi_path, 
                 filename="pattern.mid", 
@@ -155,6 +193,42 @@ async def generate_pattern(request: PatternRequest):
         except Exception as e:
             optimize_vram()
             raise HTTPException(status_code=500, detail=str(e))
+
+class ResearchRequest(BaseModel):
+    prompt: str
+    system_prompt: str
+
+@app.post("/research_theory")
+async def research_theory(request: ResearchRequest):
+    """Secondary Director: Suggests theory based on concept."""
+    print(f"ACE-Step: Researching theory for '{request.prompt}'...")
+    import random
+    
+    is_chill = any(k in request.prompt.lower() for k in ["chill", "ambient", "relax"])
+    is_fast = any(k in request.prompt.lower() for k in ["ebm", "techno", "fast", "dance"])
+    
+    bpm = random.randint(80, 100) if is_chill else (random.randint(128, 145) if is_fast else 120)
+    
+    scales = {
+        "minor": [0, 2, 3, 5, 7, 8, 10],
+        "phrygian": [0, 1, 3, 5, 7, 8, 10],
+        "dorian": [0, 2, 3, 5, 7, 9, 10],
+        "major": [0, 2, 4, 5, 7, 9, 11]
+    }
+    scale_name = random.choice(list(scales.keys()))
+    
+    theory = {
+        "bpm": bpm,
+        "scale": scale_name,
+        "intervals": scales[scale_name],
+        "root_midi": random.choice([36, 48, 60]),
+        "genre_notes": f"ACE-Step optimized {scale_name} foundation.",
+        "title": f"Bridge_Production_{random.randint(1000, 9999)}",
+        "folder": "bridge_output"
+    }
+    
+    print(f"ACE-Step: Theory decided. {bpm} BPM, {scale_name}")
+    return theory
 
 
 if __name__ == "__main__":

@@ -1,22 +1,5 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
 venv/
+__pycache__/
+*.mid
+output/*
 .env
-
-# MIDI Output
-output/*.mid
-
-
-model.safetensors
-
-# OS
-.DS_Store
-
-# Torch/CUDA
-remote_bridge/venv/
-remote_bridge/*.pt
-
-
-*.log
