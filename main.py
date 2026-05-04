@@ -26,41 +26,69 @@ def main():
     folder_context = f"Existing folders for inspiration: {', '.join(existing_folders) if existing_folders else 'None'}"
     full_concept = f"{args.concept}. {folder_context}"
 
+    max_retries = 3
+    current_attempt = 1
+    active_prompt = full_concept
+
     print(f"--- Creative Director & Librarian: Starting session for '{args.concept}' ---")
     composer = Composer(model_name=args.model)
     
-    try:
-        if args.monolithic:
-            composition = composer.compose_monolithic(args.concept)
-        else:
-            composition = composer.compose(args.concept, context=folder_context)
-    except Exception as e:
-        print(f"Failed to generate composition: {e}")
-        return
+    while current_attempt <= max_retries:
+        try:
+            if args.monolithic:
+                composition = composer.compose_monolithic(active_prompt)
+            else:
+                composition = composer.compose(active_prompt, context=folder_context)
+        except Exception as e:
+            print(f"Failed to generate composition: {e}")
+            return
 
-    if composition:
+        if not composition:
+            return
+
         print(f"Librarian: Sorting '{composition.meta.title}' into {composition.meta.genre}/{composition.meta.folder}")
         
         engine = SequencerEngine(composition)
         midi_data = engine.generate()
         
-        # --- ENFORCE HIERARCHY: [genre]/[topic]/[title].mid ---
-        def clean(s): return "".join(c for c in s if c.isalnum() or c in (' ', '_', '/')).replace(' ', '_').lower()
+        # --- QA AGENT: AUTO-REJECTION LOOP ---
+        silent_tracks = []
+        for inst in midi_data.instruments:
+            if len(inst.notes) == 0:
+                silent_tracks.append(inst.name)
+                
+        if silent_tracks and current_attempt < max_retries:
+            print(f"\n[QA AGENT] REJECTED: Silent tracks detected ({', '.join(silent_tracks)}).")
+            print(f"[QA AGENT] Auto-correcting and maintaining context for Attempt {current_attempt + 1}...\n")
+            
+            # Maintain context and force the AI to correct its mistake
+            active_prompt = f"{full_concept}\n\nQA SYSTEM FEEDBACK FROM PREVIOUS ATTEMPT (DO NOT REPEAT THIS MISTAKE):\nThe previous composition was REJECTED because the following tracks generated 0 notes: {', '.join(silent_tracks)}. You MUST fix this. 0-note tracks are strictly forbidden."
+            current_attempt += 1
+            continue
+        elif silent_tracks:
+            print(f"\n[QA AGENT] WARNING: Max retries ({max_retries}) reached. Proceeding with silent tracks.\n")
+            break
+        else:
+            print(f"\n[QA AGENT] PASSED: All {len(midi_data.instruments)} tracks are fully active.\n")
+            break
         
-        safe_genre = clean(composition.meta.genre)
-        safe_topic = clean(composition.meta.folder)
-        safe_title = clean(composition.meta.title)
-        
-        # Build strict path
-        final_dir = os.path.join(base_output, safe_genre, safe_topic)
-        os.makedirs(final_dir, exist_ok=True)
-        final_path = os.path.join(final_dir, f"{safe_title}.mid")
-        
-        midi_data.write(final_path)
-        print(f"Success! Song archived at: {final_path}")
-        
-        if args.render:
-            composer.render_to_audio(final_path)
+    # --- ENFORCE HIERARCHY: [genre]/[topic]/[title].mid ---
+    def clean(s): return "".join(c for c in s if c.isalnum() or c in (' ', '_', '/')).replace(' ', '_').lower()
+    
+    safe_genre = clean(composition.meta.genre)
+    safe_topic = clean(composition.meta.folder)
+    safe_title = clean(composition.meta.title)
+    
+    # Build strict path
+    final_dir = os.path.join(base_output, safe_genre, safe_topic)
+    os.makedirs(final_dir, exist_ok=True)
+    final_path = os.path.join(final_dir, f"{safe_title}.mid")
+    
+    midi_data.write(final_path)
+    print(f"Success! Song archived at: {final_path}")
+    
+    if args.render:
+        composer.render_to_audio(final_path)
 
 if __name__ == "__main__":
     main()
