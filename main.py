@@ -9,6 +9,7 @@ def main():
     parser = argparse.ArgumentParser(description="Pro AI Music Sequencer")
     parser.add_argument("--concept", type=str, required=True, help="Style + Theme (e.g., 'EBM about World War 2')")
     parser.add_argument("--model", type=str, default="llama3:8b", help="Ollama model name")
+    parser.add_argument("--monolithic", action="store_true", help="EXPERIMENTAL: Generate entire song in one handshake")
     
     args = parser.parse_args()
 
@@ -28,7 +29,10 @@ def main():
     composer = Composer(model_name=args.model)
     
     try:
-        composition = composer.compose(full_concept)
+        if args.monolithic:
+            composition = composer.compose_monolithic(args.concept)
+        else:
+            composition = composer.compose(args.concept, context=folder_context)
     except Exception as e:
         print(f"Failed to generate composition: {e}")
         return

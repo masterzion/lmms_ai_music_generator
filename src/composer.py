@@ -1,3 +1,4 @@
+import os
 import json
 import requests
 from typing import Optional, Dict, Any, List
@@ -157,6 +158,7 @@ Translate "Style + Theme" into a professional music specification.
                     return data
                 else:
                     print(f"      ! Missing keys in JSON. Retrying...")
+                    print(data)
             except Exception as e:
                 print(f"      ! Theory attempt {attempt + 1} failed: {e}")
         
@@ -164,32 +166,45 @@ Translate "Style + Theme" into a professional music specification.
         return self.get_ace_step_theory(concept)
 
     def _create_blueprint(self, concept: str, theory: Dict[str, Any]) -> Dict[str, Any]:
-        """Stage 2: Design the structure and track list."""
+        """Stage 2: Design the structure and track list with 5x retry logic."""
         print(f"--- Stage 2: Designing Song Blueprint ---")
         prompt = f"""Given "{concept}" and theory {theory}, design a song BLUEPRINT.
         Requirements:
         1. MANDATORY: 10-12 instruments.
         2. MANDATORY: Total bars must be ~160 (to reach 4-5 minutes).
-        Return ONLY JSON:
+        Return ONLY valid JSON:
         {{
-          "structure": [{{"section": "Intro", "bars": 32}}, {{"section": "Main", "bars": 64}}...],
-          "track_names": ["Drums", "Bass", "Synth_Pad", "Lead"...]
+          "structure": [{{"section": "Intro", "bars": 32}}, {{"section": "Main", "bars": 64}}],
+          "track_names": ["Drums", "Bass", "Synth_Pad", "Lead", "Atmosphere", "Fx", "Perc", "Sub", "Arp", "Hook"]
         }}
         """
-        try:
-            response = requests.post(
-                self.api_url,
-                json={"model": self.model_name, "prompt": prompt, "stream": False},
-                timeout=14400
-            )
-            raw = self._extract_json(response.json().get("response", ""))
-            return json.loads(raw)
-        except Exception as e:
-            print(f"Blueprint failed: {e}. Using defaults.")
-            return {
-                "structure": [{"section": "Main", "bars": 160}],
-                "track_names": [f"Track_{i}" for i in range(10)]
-            }
+        for attempt in range(5):
+            try:
+                print(f"   Blueprint Attempt {attempt + 1}/5...")
+                response = requests.post(
+                    self.api_url,
+                    json={"model": self.model_name, "prompt": prompt, "stream": False},
+                    timeout=14400
+                )
+                raw = self._extract_json(response.json().get("response", ""))
+                data = json.loads(raw)
+                
+                # Validation: 10+ tracks and 140+ bars
+                total_bars = sum(s["bars"] for s in data.get("structure", []))
+                track_count = len(data.get("track_names", []))
+                
+                if track_count >= 10 and total_bars >= 140:
+                    return data
+                else:
+                    print(f"      ! Blueprint failed validation: {track_count} tracks, {total_bars} bars. Retrying...")
+            except Exception as e:
+                print(f"      ! Blueprint attempt {attempt + 1} failed: {e}")
+        
+        print(f"CRITICAL: Blueprint design failed after 5 attempts. Using emergency recovery.")
+        return {
+            "structure": [{"section": "Main", "bars": 160}],
+            "track_names": [f"Track_{i}" for i in range(10)]
+        }
 
     def _generate_track(self, name: str, blueprint: Dict[str, Any], theory: Dict[str, Any]) -> Track:
         """Stage 3: Generate patterns for a single instrument."""
@@ -222,23 +237,64 @@ Translate "Style + Theme" into a professional music specification.
             print(f"      ! Track [{name}] failed: {e}. Using silent placeholder.")
             return Track(type="polyphonic", patterns={sections[0]: [0]})
 
-    def compose(self, user_request: str, max_retries: int = 3) -> Composition:
+    def _get_checkpoint_path(self, concept: str, stage: str) -> str:
+        safe_concept = "".join([c if c.isalnum() else "_" for c in concept])[:50]
+        os.makedirs("checkpoints", exist_ok=True)
+        return f"checkpoints/{safe_concept}_{stage}.json"
+
+    def _save_checkpoint(self, concept: str, stage: str, data: Any):
+        path = self._get_checkpoint_path(concept, stage)
+        with open(path, "w") as f:
+            if hasattr(data, "dict"): # For Pydantic models
+                json.dump(data.dict(), f, indent=2)
+            else:
+                json.dump(data, f, indent=2)
+        print(f"   [Checkpoint Saved] -> {stage}")
+
+    def _load_checkpoint(self, concept: str, stage: str) -> Optional[Any]:
+        path = self._get_checkpoint_path(concept, stage)
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                print(f"   [Checkpoint Loaded] -> {stage}")
+                return json.load(f)
+        return None
+
+    def compose(self, user_request: str, context: str = "", max_retries: int = 3) -> Composition:
+        # Combined prompt for the AI, but 'user_request' remains the checkpoint key
+        full_concept = f"{user_request}. {context}"
+        
         # STEP 1: RESEARCH
-        theory = self._research_theory(user_request)
-        print(f"Theory Found: {theory.get('bpm')} BPM, Root {theory.get('root_midi')}")
+        theory = self._load_checkpoint(user_request, "theory")
+        if not theory:
+            theory = self._research_theory(full_concept)
+            self._save_checkpoint(user_request, "theory", theory)
+        
+        print(f"Theory: {theory.get('bpm')} BPM, Root {theory.get('root_midi')}")
 
         # STEP 2: BLUEPRINT
-        blueprint = self._create_blueprint(user_request, theory)
-        print(f"Blueprint Ready: {len(blueprint['track_names'])} instruments, {sum(s['bars'] for s in blueprint['structure'])} total bars.")
+        blueprint = self._load_checkpoint(user_request, "blueprint")
+        if not blueprint:
+            blueprint = self._create_blueprint(full_concept, theory)
+            self._save_checkpoint(user_request, "blueprint", blueprint)
+            
+        print(f"Blueprint: {len(blueprint['track_names'])} instruments, {sum(s['bars'] for s in blueprint['structure'])} total bars.")
 
-        # STEP 3: MODULAR ORCHESTRATION (ACE-Step Primary)
+    def _orchestrate_all_tracks(self, concept: str, blueprint: Dict[str, Any], theory: Dict[str, Any]) -> Dict[str, Track]:
+        """Stage 3: Orchestrate all instruments in the blueprint."""
+        print(f"--- Stage 3: Orchestrating All Instruments ---")
         tracks = {}
         for name in blueprint["track_names"]:
+            # Check if this specific track is already done
+            track_data = self._load_checkpoint(concept, f"track_{name}")
+            if track_data:
+                print(f"   > Track [{name}] found in checkpoint. Resuming...")
+                tracks[name] = Track(**track_data)
+                continue
+
             print(f"   > Orchestrating Track: [{name}]...")
             
-            # 1. TRY ACE-STEP FIRST (Primary Generator)
+            # 1. ACE-Step Bridge Handshake
             bridge_data = self.get_ace_step_pattern(name, theory, energy=0.7)
-            
             if bridge_data:
                 print(f"      + ACE-Step generated professional patterns and schedule.")
                 track = Track(
@@ -248,30 +304,52 @@ Translate "Style + Theme" into a professional music specification.
                     schedule=bridge_data["schedule"]
                 )
             else:
-                # 2. FALLBACK TO LLM (Internal Sequencer - MOTIF BASED)
+                # 2. Internal Motif Fallback
                 print(f"      ! Bridge unavailable. Using Internal Motif Sequencer...")
                 import random
-                
                 is_drum = any(k in name.lower() for k in ["drum", "kick", "perc", "808", "snare", "hat"])
                 
                 if is_drum:
-                    # Drum Motif: Use Kick (36), Snare (38), Hat (42)
                     drum_notes = [36, 38, 42]
                     motif = [random.choice(drum_notes) if random.random() < 0.6 else -1 for _ in range(8)]
                 else:
-                    # Melodic Motif: Use AI Intervals
                     motif = [random.choice(theory["intervals"]) if random.random() < 0.6 else -1 for _ in range(8)]
                 
                 track = Track(
                     type="polyphonic",
                     density=0.6,
                     patterns={s["section"]: [motif[i % 8] for i in range(16)] for s in blueprint["structure"]},
-                    schedule=None # Play everywhere as fallback
+                    schedule=None
                 )
 
+            self._save_checkpoint(concept, f"track_{name}", track)
             tracks[name] = track
+        return tracks
 
-        # STEP 4: ASSEMBLE (Pure AI-Driven, Zero Hardcoding)
+    def compose(self, user_request: str, context: str = "", max_retries: int = 3) -> Composition:
+        # Combined prompt for the AI
+        full_concept = f"{user_request}. {context}"
+        
+        # STEP 1: RESEARCH
+        theory = self._load_checkpoint(user_request, "theory")
+        if not theory:
+            theory = self._research_theory(full_concept)
+            self._save_checkpoint(user_request, "theory", theory)
+        
+        print(f"Theory: {theory.get('bpm')} BPM, Root {theory.get('root_midi')}")
+
+        # STEP 2: BLUEPRINT
+        blueprint = self._load_checkpoint(user_request, "blueprint")
+        if not blueprint:
+            blueprint = self._create_blueprint(full_concept, theory)
+            self._save_checkpoint(user_request, "blueprint", blueprint)
+            
+        print(f"Blueprint: {len(blueprint['track_names'])} instruments, {sum(s['bars'] for s in blueprint['structure'])} total bars.")
+
+        # STEP 3: ORCHESTRATION
+        tracks = self._orchestrate_all_tracks(user_request, blueprint, theory)
+
+        # STEP 4: ASSEMBLE
         comp = Composition(
             meta={
                 "bpm": theory["bpm"],
@@ -302,5 +380,36 @@ Translate "Style + Theme" into a professional music specification.
             return Composition(**raw_data)
         except Exception as e:
             print(f"Validation failed: {e}")
-            # Potential for "Fix this JSON" prompt here
+            raise
+
+    def compose_monolithic(self, user_request: str) -> Composition:
+        """EXPERIMENTAL: Generate the entire composition in ONE handshake with a Master Prompt."""
+        print(f"--- MONOLITHIC MODE: Delegating entire song to ACE-Step ---")
+        bridge_url = "http://192.168.2.188:8000/generate_full_composition"
+        
+        # Build the Master Prompt
+        master_prompt = f"""
+        YOU ARE THE MASTER PRODUCER. 
+        GENERATE A FULL COMPOSITION JSON FOR: "{user_request}"
+        
+        MANDATORY REQUIREMENTS:
+        1. DURATION: Minimum 4 minutes (at least 160 bars in structure).
+        2. TRACKS: Minimum 10 unique instruments (drums, bass, leads, pads, effects, etc).
+        3. THEORY: Decipher professional BPM, Scale, and Intervals.
+        4. MOTIFS: Every track must use repeating 8-step motifs (No random noise).
+        5. ORGANIZATION: Suggest a professional title and subfolder.
+        
+        OUTPUT ONLY THE FULL COMPOSITION JSON.
+        """
+        
+        try:
+            response = requests.post(
+                bridge_url,
+                json={"prompt": master_prompt, "system_prompt": self.system_prompt},
+                timeout=14400
+            )
+            data = response.json()
+            return Composition(**data)
+        except Exception as e:
+            print(f"Monolithic composition failed: {e}")
             raise

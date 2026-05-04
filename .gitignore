@@ -1,5 +1,6 @@
+output/*
+checkpoints/
+.env
+*.mid
 venv/
 __pycache__/
-*.mid
-output/*
-.env

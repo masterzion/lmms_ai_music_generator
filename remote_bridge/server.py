@@ -230,6 +230,59 @@ async def research_theory(request: ResearchRequest):
     print(f"ACE-Step: Theory decided. {bpm} BPM, {scale_name}")
     return theory
 
+class FullCompositionRequest(BaseModel):
+    prompt: str
+    system_prompt: str
+
+@app.post("/generate_full_composition")
+async def generate_full_composition(request: FullCompositionRequest):
+    """Monolithic Producer: Generates the entire song in one pass."""
+    print(f"ACE-Step: MONOLITHIC production for '{request.prompt}'...")
+    import random
+    
+    # 1. GENERATE THEORY
+    is_chill = any(k in request.prompt.lower() for k in ["chill", "ambient", "relax"])
+    is_fast = any(k in request.prompt.lower() for k in ["ebm", "techno", "fast", "dance"])
+    bpm = random.randint(80, 100) if is_chill else (random.randint(128, 145) if is_fast else 120)
+    scales = {"minor": [0, 2, 3, 5, 7, 8, 10], "phrygian": [0, 1, 3, 5, 7, 8, 10], "dorian": [0, 2, 3, 5, 7, 9, 10]}
+    scale_name = random.choice(list(scales.keys()))
+    intervals = scales[scale_name]
+    root_midi = random.choice([36, 48, 60])
+    
+    # 2. DEFINE TRACKS
+    track_names = ["Drum_Kit", "Sub_Bass", "Chord_Pad", "Lead_Arp", "Acid_Line", "Vox_Effect", "Percussion", "Strings", "Riser", "Hook"]
+    tracks = {}
+    
+    # 3. GENERATE ALL TRACKS AT ONCE
+    for name in track_names:
+        is_drum = any(k in name.lower() for k in ["drum", "kick", "perc"])
+        motif_len = 4 if is_drum else 8
+        motif = []
+        for _ in range(motif_len):
+            if random.random() < 0.6:
+                motif.append(0 if is_drum else random.choice(intervals))
+            else:
+                motif.append(-1)
+        
+        # Tile across 160 bars (simplified for monolithic demo)
+        pattern = [motif[i % motif_len] for i in range(16)]
+        
+        tracks[name] = {
+            "type": "polyphonic",
+            "density": 0.7,
+            "patterns": {"Main": pattern},
+            "schedule": [0, 1, 2, 3, 4, 5, 6, 7] # Play everywhere
+        }
+        
+    return {
+        "meta": {
+            "bpm": bpm, "scale": scale_name, "intervals": intervals,
+            "root_midi": root_midi, "genre": f"Monolithic {scale_name} production",
+            "title": f"Mono_{random.randint(100, 999)}", "folder": "monolithic"
+        },
+        "structure": [{"section": "Main", "bars": 160}],
+        "tracks": tracks
+    }
 
 if __name__ == "__main__":
     load_model()
