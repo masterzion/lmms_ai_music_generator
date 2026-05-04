@@ -15,7 +15,6 @@ DO NOT include any markdown formatting (like ```json), DO NOT include any conver
 ### CORE OBJECTIVE:
 Translate high-level genre concepts into a precise MIDI-compatible JSON specification. 
 Ensure the BPM, Scale, and Note Patterns are mathematically consistent with the requested style.
-"""
 
 ### EXPECTED JSON SCHEMA EXAMPLE:
 {
