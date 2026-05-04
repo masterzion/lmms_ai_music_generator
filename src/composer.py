@@ -8,28 +8,24 @@ class Composer:
     def __init__(self, model_name: str = "llama3:8b", api_url: str = "http://192.168.2.188:11434/api/generate"):
         self.model_name = model_name
         self.api_url = api_url
-        self.system_prompt = """You are a Master Music Producer and Creative Director.
-Output ONLY valid JSON. 
+        self.system_prompt = """You are an Elite AI Music Producer. Output ONLY valid JSON. 
 
 ### YOUR TASK:
-Translate "Style + Theme" into a professional music specification.
-1. STYLE RESEARCH: Decide BPM and Scale.
-2. TRACK COUNT: MANDATORY MINIMUM 10 TRACKS. 
-3. DURATION: MANDATORY MINIMUM 4 MINUTES (total bars must sum to 140-160+).
-4. LIBRARIAN: Generate 'title' and 'folder' (e.g., "ebm/war").
-5. SCHEDULE: Create a dynamic arrangement [0, 1, 2...].
+Translate the Master Prompt instructions into a professional JSON music specification.
+You MUST strictly follow the dynamic rules provided in the Master Prompt regarding Track Counts, Style, and Sound Design.
 
 ### FORMAT:
 - META: bpm, scale, genre, title, folder, swing.
 - Use LOWERCASE for all keys. NO LETTERS for patterns.
+- Do NOT hallucinate complex arrangement schedules. Let the Server Matrix handle arrangement math.
 
-### GOOD EXAMPLE:
+### EXPECTED JSON SCHEMA EXAMPLE:
 {
-  "meta": {"bpm": 126, "scale": "D_phrygian", "genre": "EBM", "swing": 0.0},
-  "structure": [{"section": "Intro", "bars": 8}, {"section": "Drop", "bars": 16}],
+  "meta": {"bpm": 126, "scale": "D_phrygian", "genre": "EBM", "swing": 0.0, "title": "Cyber War", "folder": "ebm"},
+  "structure": [{"section": "Intro", "bars": 32}, {"section": "Drop", "bars": 32}],
   "tracks": {
-    "War_Drum": {"type": "drum_machine", "schedule": [0, 1], "patterns": {"Intro": {"kick": "X---"}}},
-    "Alarm_Synth": {"type": "monophonic", "schedule": [1], "patterns": {"Drop": [0, 1, 0, 1]}}
+    "Drum_Kit": {"type": "polyphonic", "schedule": [0, 1], "patterns": {"Main": [-1, -1, 36, -1]}},
+    "Acid_Line": {"type": "monophonic", "schedule": [1], "patterns": {"Main": [48, 48, 60, -1]}}
   }
 }
 """
