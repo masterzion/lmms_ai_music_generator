@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<lmms-project version="1.0" creator="python">
+  <song type="0">
+    <trackcontainer type="song" x="5" y="5" width="600" height="300" />
+    <trackcontainer type="bbtrackcontainer" x="5" y="310" width="600" height="300" />
+  </song>
+  <head />
+</lmms-project>
