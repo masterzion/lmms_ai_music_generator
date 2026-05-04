@@ -34,19 +34,25 @@ def main():
         return
 
     if composition:
-        print(f"Title: '{composition.meta.title}' | Genre: {composition.meta.genre} | Folder: {composition.meta.folder}")
+        print(f"Librarian: Sorting '{composition.meta.title}' into {composition.meta.genre}/{composition.meta.folder}")
         
         engine = SequencerEngine(composition)
         midi_data = engine.generate()
         
-        # Calculate final path
-        safe_title = "".join(c for c in composition.meta.title if c.isalnum() or c in (' ', '_')).replace(' ', '_').lower()
-        final_dir = os.path.join(base_output, composition.meta.folder)
+        # --- ENFORCE HIERARCHY: [genre]/[topic]/[title].mid ---
+        def clean(s): return "".join(c for c in s if c.isalnum() or c in (' ', '_', '/')).replace(' ', '_').lower()
+        
+        safe_genre = clean(composition.meta.genre)
+        safe_topic = clean(composition.meta.folder)
+        safe_title = clean(composition.meta.title)
+        
+        # Build strict path
+        final_dir = os.path.join(base_output, safe_genre, safe_topic)
         os.makedirs(final_dir, exist_ok=True)
         final_path = os.path.join(final_dir, f"{safe_title}.mid")
         
         midi_data.write(final_path)
-        print(f"Success! Final song saved to: {final_path}")
+        print(f"Success! Song archived at: {final_path}")
 
 if __name__ == "__main__":
     main()
