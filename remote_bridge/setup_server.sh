@@ -79,3 +79,14 @@ python3 -c "import torch; print(f'PyTorch Version: {torch.__version__}'); print(
 echo "--- Setup Complete ---"
 echo "To start the server on Steam Deck, run:"
 echo "export HSA_OVERRIDE_GFX_VERSION=10.3.0 && source venv/bin/activate && python server.py"
+
+# 7. --- AUDIO RENDERING ENGINE (NEW) ---
+echo "--- Installing Audio Rendering Engine (FluidSynth) ---"
+# Note: You may need to run 'sudo steamos-readonly disable' first on Steam Deck
+sudo pacman -S --noconfirm fluidsynth hwdata
+
+echo "Downloading High-Fidelity SoundFont (FluidR3_GM)..."
+mkdir -p soundfonts
+wget -c -O soundfonts/FluidR3_GM.sf2 https://github.com/uraymeivreg/FluidR3_GM/raw/master/FluidR3_GM.sf2
+
+echo "Setup Complete! ROCm and Audio Rendering are ready."

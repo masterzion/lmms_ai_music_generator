@@ -387,19 +387,15 @@ Translate "Style + Theme" into a professional music specification.
         print(f"--- MONOLITHIC MODE: Delegating entire song to ACE-Step ---")
         bridge_url = "http://192.168.2.188:8000/generate_full_composition"
         
-        # Build the Master Prompt
+        # Build the Simplified Master Prompt for Maximum Creativity
         master_prompt = f"""
-        YOU ARE THE MASTER PRODUCER. 
-        GENERATE A FULL COMPOSITION JSON FOR: "{user_request}"
+        PRODUCE A FULL COMPOSITION FOR: "{user_request}"
         
-        MANDATORY REQUIREMENTS:
-        1. DURATION: Minimum 4 minutes (at least 160 bars in structure).
-        2. TRACKS: Minimum 10 unique instruments (drums, bass, leads, pads, effects, etc).
-        3. THEORY: Decipher professional BPM, Scale, and Intervals.
-        4. MOTIFS: Every track must use repeating 8-step motifs (No random noise).
-        5. ORGANIZATION: Suggest a professional title and subfolder.
+        FOUNDATIONAL RULES:
+        1. DURATION: Minimum 4 minutes.
+        2. ORCHESTRATION: Minimum 10 instruments.
         
-        OUTPUT ONLY THE FULL COMPOSITION JSON.
+        Let the music flow. Output ONLY the JSON.
         """
         
         try:

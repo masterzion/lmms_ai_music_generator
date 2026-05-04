@@ -253,36 +253,86 @@ async def generate_full_composition(request: FullCompositionRequest):
     track_names = ["Drum_Kit", "Sub_Bass", "Chord_Pad", "Lead_Arp", "Acid_Line", "Vox_Effect", "Percussion", "Strings", "Riser", "Hook"]
     tracks = {}
     
-    # 3. GENERATE ALL TRACKS AT ONCE
+    # 3. GENERATE ALL TRACKS AT ONCE (Full 160 Bars)
+    total_bars = 160
+    steps_per_bar = 16
+    total_steps = total_bars * steps_per_bar
+    
     for name in track_names:
-        is_drum = any(k in name.lower() for k in ["drum", "kick", "perc"])
+        is_drum = any(k in name.lower() for k in ["drum", "kick", "perc", "808", "beat"])
         motif_len = 4 if is_drum else 8
+        
+        # Create the Hook/Groove
         motif = []
         for _ in range(motif_len):
             if random.random() < 0.6:
-                motif.append(0 if is_drum else random.choice(intervals))
+                if is_drum:
+                    motif.append(random.choice([36, 38, 42])) # Kick, Snare, Hat
+                else:
+                    motif.append(root_midi + random.choice(intervals))
             else:
                 motif.append(-1)
         
-        # Tile across 160 bars (simplified for monolithic demo)
-        pattern = [motif[i % motif_len] for i in range(16)]
+        # Tile across ALL bars
+        full_pattern = [motif[i % motif_len] for i in range(total_steps)]
         
         tracks[name] = {
             "type": "polyphonic",
             "density": 0.7,
-            "patterns": {"Main": pattern},
-            "schedule": [0, 1, 2, 3, 4, 5, 6, 7] # Play everywhere
+            "patterns": {"Main": full_pattern},
+            "schedule": [0] 
         }
-        
+    
+    # Save the MASTER MIDI for rendering (Full 4-minute sequence)
+    mid = MidiFile()
+    for name, t_data in tracks.items():
+        track = MidiTrack()
+        mid.tracks.append(track)
+        track.append(Message('track_name', name=name, time=0))
+        for note in t_data["patterns"]["Main"]:
+            if note != -1:
+                track.append(Message('note_on', note=note, velocity=90, time=0))
+                track.append(Message('note_off', note=note, velocity=0, time=120))
+            else:
+                track.append(Message('note_off', note=0, velocity=0, time=120))
+                
+    mid.save("ace_step_output.mid")
+    
     return {
         "meta": {
             "bpm": bpm, "scale": scale_name, "intervals": intervals,
             "root_midi": root_midi, "genre": f"Monolithic {scale_name} production",
             "title": f"Mono_{random.randint(100, 999)}", "folder": "monolithic"
         },
-        "structure": [{"section": "Main", "bars": 160}],
+        "structure": [{"section": "Main", "bars": total_bars}],
         "tracks": tracks
     }
+@app.post("/render_wav")
+async def render_wav(request: Request):
+    """Renders the last generated MIDI into a high-quality WAV."""
+    print("ACE-Step: Rendering MIDI to WAV (Hi-Fi mode)...")
+    midi_file = "ace_step_output.mid"
+    wav_file = "ace_step_output.wav"
+    sf2_path = "soundfonts/FluidR3_GM.sf2"
+    
+    if not os.path.exists(midi_file):
+        raise HTTPException(status_code=404, detail="No MIDI file found to render.")
+    
+    # Run FluidSynth in background to render WAV
+    import subprocess
+    try:
+        # fluidsynth -ni [sf2] [midi] -F [output]
+        cmd = ["fluidsynth", "-ni", sf2_path, midi_file, "-F", wav_file, "-r", "44100"]
+        subprocess.run(cmd, check=True)
+        
+        return FileResponse(
+            path=wav_file,
+            filename="production.wav",
+            media_type="audio/wav"
+        )
+    except Exception as e:
+        print(f"Rendering failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     load_model()
