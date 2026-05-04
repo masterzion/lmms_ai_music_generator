@@ -261,7 +261,7 @@ async def generate_full_composition(request: FullCompositionRequest):
     print(f"ACE-Step: PHASE 2 (MIDI Generation) with forced generation_phase='midi'...")
     
     # 2. DEFINE TRACKS
-    track_names = ["Drum_Kit", "Sub_Bass", "Chord_Pad", "Lead_Arp", "Acid_Line", "Vox_Effect", "Percussion", "Strings", "Riser", "Hook"]
+    track_names = ["Drum_Kit", "Sub_Bass", "Chord_Pad", "Lead_Arp", "Acid_Line", "Vox_Effect", "Industrial_Claps", "Strings", "Riser", "Hook"]
     tracks = {}
     
     # 3. GENERATE ALL TRACKS AT ONCE (Full 160 Bars)
@@ -271,22 +271,25 @@ async def generate_full_composition(request: FullCompositionRequest):
     
     for i, name in enumerate(track_names):
         name_l = name.lower()
-        is_drum = any(k in name_l for k in ["drum", "kick", "perc", "808", "beat", "clap"])
+        is_clap = "clap" in name_l
+        is_drum = any(k in name_l for k in ["drum", "kick", "perc", "808", "beat"])
         is_bass = any(k in name_l for k in ["bass", "acid", "sub"])
-        motif_len = 4 if is_drum else 8
+        motif_len = 4 if (is_drum or is_clap) else 8
         
         # CADENCE LOGIC
-        offset = 0 if (is_drum or is_bass) else (i % 4) * 2
+        offset = 0 if (is_drum or is_bass or is_clap) else (i % 4) * 2
         
         # Create the Hook/Groove
         motif = []
         for _ in range(motif_len):
             # FORCE DENSITY: Drums and Bass are the EBM backbone (0.8-0.9 density)
-            prob = 0.9 if (is_drum or is_bass) else 0.4
+            prob = 0.9 if (is_drum or is_bass or is_clap) else 0.4
             if random.random() < prob:
-                if is_drum:
-                    # Extended Industrial Mapping: Kick(36), Snare(38), Claps(39), OpenHat(42)
-                    motif.append(random.choice([36, 38, 39, 40, 42])) 
+                if is_clap:
+                    motif.append(39) # Standard MIDI Hand Clap
+                elif is_drum:
+                    # Extended Industrial Mapping: Kick(36), Snare(38), OpenHat(42)
+                    motif.append(random.choice([36, 38, 40, 42])) 
                 elif is_bass:
                     # Force Bass to lowest octave for EBM "Chug" + Safety Clamp
                     val = root_midi - 12 + random.choice(intervals[:3])
@@ -296,6 +299,20 @@ async def generate_full_composition(request: FullCompositionRequest):
                     motif.append(max(0, min(127, val)))
             else:
                 motif.append(-1)
+                
+        # SAFETY SHIELD: Guarantee No Silent Tracks
+        # If the probability calculation gave us 0 notes, we FORCE at least one note.
+        if all(x == -1 for x in motif):
+            if is_clap:
+                motif[0] = 39
+            elif is_drum:
+                motif[0] = random.choice([36, 38, 40, 42])
+            elif is_bass:
+                val = root_midi - 12 + random.choice(intervals[:3])
+                motif[0] = max(0, min(127, val))
+            else:
+                val = root_midi + random.choice(intervals)
+                motif[0] = max(0, min(127, val))
         
         # ARRANGEMENT LOGIC (Logical Starting/Stopping)
         # 0 = Always play, 1 = Section A, 2 = Section B, 3 = Bridge/Breakdown
