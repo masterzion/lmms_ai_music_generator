@@ -58,15 +58,22 @@ class SequencerEngine:
         return pretty_midi.Note(human_vel, midi_note, human_start, human_start + duration)
 
     def generate(self) -> pretty_midi.PrettyMIDI:
+        print(f"--- Starting MIDI Generation (BPM: {self.comp.meta.bpm}) ---")
         # Create tracks
         for name, track_data in self.comp.tracks.items():
-            if track_data.type == "drum_machine":
+            t_type = track_data.type.lower()
+            print(f"Processing Track: [{name}] (Type: {t_type})")
+            
+            if t_type in ["drum_machine", "drums", "percussion"]:
                 self._process_drum_track(name, track_data)
-            elif track_data.type == "monophonic":
+            elif t_type in ["monophonic", "mono", "bass", "lead", "melodic"]:
                 self._process_mono_track(name, track_data)
-            elif track_data.type == "poly":
+            elif t_type in ["poly", "polyphonic", "chords", "pads", "piano"]:
                 self._process_poly_track(name, track_data)
+            else:
+                print(f"Warning: Unknown track type '{t_type}'. Skipping.")
         
+        print(f"Generation Complete. Total Tracks: {len(self.pm.instruments)}")
         return self.pm
 
     def _process_drum_track(self, name: str, track: Track):
@@ -133,12 +140,17 @@ class SequencerEngine:
         root_note = f"C{track.octave or 4}"
         scale_type = self.comp.meta.scale.split("_")[-1] if "_" in self.comp.meta.scale else "minor"
 
-        if not track.motifs: return
+        # Check both motifs and patterns for poly tracks
+        source = track.motifs if track.motifs else track.patterns
+        if not source: return
 
         for section_info in self.comp.structure:
             motif_name = section_info.section
-            motif = track.motifs.get(motif_name) or list(track.motifs.values())[0]
+            motif = source.get(motif_name) or list(source.values())[0]
             
+            # Ensure we are dealing with a list
+            if not isinstance(motif, list): continue
+
             for bar in range(section_info.bars):
                 for i, degree in enumerate(motif):
                     if i >= 16: break

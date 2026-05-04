@@ -1,6 +1,6 @@
 import json
 import requests
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from .schema import Composition
 
 class Composer:
@@ -36,19 +36,43 @@ Output JSON only. No text before or after.
 """
 
     def get_ace_step_pattern(self, prompt: str, energy: float = 0.8) -> Optional[List[int]]:
-        """Requests a high-fidelity pattern from the 8GB remote bridge."""
-        # Assume bridge is on the same IP but port 8000
+        """Requests a MIDI pattern from the Steam Deck / ROCm remote bridge."""
+        import mido
+        import io
         bridge_url = self.api_url.replace(":11434/api/generate", ":8000/generate_pattern")
+        print(f"Handshaking with Steam Deck Bridge at {bridge_url}...")
         try:
             response = requests.post(
                 bridge_url,
                 json={"prompt": prompt, "energy": energy},
-                timeout=10
+                timeout=14400,
+                stream=True
             )
             if response.status_code == 200:
-                return response.json().get("pattern")
-        except:
-            return None # Fallback to LLM pattern if bridge is offline
+                print("Bridge Handshake Successful. Downloading pattern...")
+                # Load the MIDI file from the binary response stream
+                midi_data = io.BytesIO(response.content)
+                mid = mido.MidiFile(file=midi_data)
+                
+                # Extract pattern (reverse the 60+note logic from server)
+                pattern = []
+                for track in mid.tracks:
+                    for msg in track:
+                        if msg.type == 'note_on':
+                            pattern.append(msg.note - 60)
+                        elif msg.type == 'note_off' and msg.time > 0:
+                            # Handle rests (if the time between notes is large)
+                            rests = msg.time // 120 # 120 ticks = 16th note
+                            pattern.extend([-1] * (rests - 1))
+                
+                print(f"Extracted {len(pattern)} notes from bridge MIDI.")
+                # Ensure it's exactly the requested length (usually 16)
+                return pattern[:16]
+            else:
+                print(f"Bridge Error: Status Code {response.status_code}")
+        except Exception as e:
+            print(f"Bridge connection failed (Offline?): {e}")
+            return None
         return None
 
     def compose(self, user_request: str, max_retries: int = 3) -> Composition:
@@ -62,13 +86,21 @@ Output JSON only. No text before or after.
                     json={
                         "model": self.model_name,
                         "prompt": current_prompt,
-                        "stream": False,
-                        "format": "json"
+                        "stream": False
+                        # "format": "json" (Removed for better reasoning)
                     },
-                    timeout=90
+                    timeout=14400
                 )
                 response.raise_for_status()
-                raw_json = response.json().get("response", "{}")
+                raw_content = response.json().get("response", "").strip()
+                
+                # Extract JSON if LLM added surrounding text
+                if "{" in raw_content:
+                    raw_json = raw_content[raw_content.find("{"):raw_content.rfind("}")+1]
+                else:
+                    raw_json = raw_content
+
+                print(f"DEBUG: RAW LLM Output (first 100 chars): {raw_json[:100]}...")
                 
                 # Parse and validate
                 data = json.loads(raw_json)
