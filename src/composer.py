@@ -8,16 +8,14 @@ class Composer:
     def __init__(self, model_name: str = "qwen2.5:7b", api_url: str = "http://192.168.2.188:11434/api/generate"):
         self.model_name = model_name
         self.api_url = api_url
-        self.system_prompt = """You are an Elite AI Music Producer. Output ONLY valid JSON. 
+        self.system_prompt = """You are an Elite AI Music Producer. 
+MANDATORY: You must return ONLY a raw JSON object. 
+DO NOT include any markdown formatting (like ```json), DO NOT include any conversational filler, and DO NOT include any text outside the final JSON block.
 
-### YOUR TASK:
-Translate the Master Prompt instructions into a professional JSON music specification.
-You MUST strictly follow the dynamic rules provided in the Master Prompt regarding Track Counts, Style, and Sound Design.
-
-### FORMAT:
-- META: bpm, scale, genre, title, folder, swing.
-- Use LOWERCASE for all keys. NO LETTERS for patterns.
-- Do NOT hallucinate complex arrangement schedules. Let the Server Matrix handle arrangement math.
+### CORE OBJECTIVE:
+Translate high-level genre concepts into a precise MIDI-compatible JSON specification. 
+Ensure the BPM, Scale, and Note Patterns are mathematically consistent with the requested style.
+"""
 
 ### EXPECTED JSON SCHEMA EXAMPLE:
 {
@@ -469,7 +467,11 @@ You MUST strictly follow the dynamic rules provided in the Master Prompt regardi
         try:
             response = requests.post(
                 bridge_url,
-                json={"prompt": master_prompt, "system_prompt": self.system_prompt},
+                json={
+                    "prompt": master_prompt, 
+                    "system_prompt": self.system_prompt,
+                    "options": {"temperature": 0.2}
+                },
                 timeout=14400
             )
             data = response.json()

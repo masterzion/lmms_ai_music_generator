@@ -236,7 +236,8 @@ Task: Design the musical theory foundation for: {request.prompt}
                 "model": "qwen2.5:7b",
                 "prompt": thought_prompt,
                 "system": request.system_prompt,
-                "stream": True
+                "stream": True,
+                "options": {"temperature": 0.2}
             },
             stream=True,
             timeout=300
@@ -325,7 +326,8 @@ User request: {request.prompt}
                 "model": "qwen2.5:7b",
                 "prompt": thought_prompt,
                 "system": request.system_prompt,
-                "stream": True
+                "stream": True,
+                "options": {"temperature": 0.2}
             },
             stream=True,
             timeout=14400
