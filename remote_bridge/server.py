@@ -205,8 +205,9 @@ async def research_theory(request: ResearchRequest):
     """Secondary Director: Suggests theory based on concept."""
     print(f"ACE-Step: Researching theory for '{request.prompt}'...")
     
-    is_chill = any(k in request.prompt.lower() for k in ["chill", "ambient", "relax"])
-    is_fast = any(k in request.prompt.lower() for k in ["ebm", "techno", "fast", "dance"])
+    prompt_lower = request.prompt.lower()
+    is_chill = "<chillout>" in prompt_lower
+    is_fast = "<ebm>" in prompt_lower or "<future pop>" in prompt_lower
     
     bpm = random.randint(80, 100) if is_chill else (random.randint(128, 145) if is_fast else 120)
     
@@ -248,8 +249,9 @@ async def generate_full_composition(request: FullCompositionRequest):
     thought_prompt = f"{request.system_prompt}\n\n<think>\nUser wants: {request.prompt}\n"
     
     # We 'Reason' about the Industrial requirements:
-    is_chill = any(k in request.prompt.lower() for k in ["chill", "ambient", "relax"])
-    is_fast = any(k in request.prompt.lower() for k in ["ebm", "techno", "fast", "dance"])
+    prompt_lower = request.prompt.lower()
+    is_chill = "<chillout>" in prompt_lower
+    is_fast = "<ebm>" in prompt_lower or "<future pop>" in prompt_lower
     
     bpm = random.randint(80, 100) if is_chill else (random.randint(128, 145) if is_fast else 120)
     scales = {"minor": [0, 2, 3, 5, 7, 8, 10], "phrygian": [0, 1, 3, 5, 7, 8, 10], "dorian": [0, 2, 3, 5, 7, 9, 10]}
@@ -266,8 +268,8 @@ async def generate_full_composition(request: FullCompositionRequest):
     
     # 3. GENERATE ALL TRACKS AT ONCE
     prompt_lower = request.prompt.lower()
-    is_future_pop = "future pop" in prompt_lower
-    is_chillout = any(k in prompt_lower for k in ["chill", "ambient", "relax", "downtempo"])
+    is_future_pop = "<future pop>" in prompt_lower
+    is_chillout = "<chillout>" in prompt_lower
     
     if is_future_pop:
         song_structure = [
