@@ -315,24 +315,36 @@ async def generate_full_composition(request: FullCompositionRequest):
                 motif[0] = max(0, min(127, val))
         
         # ARRANGEMENT LOGIC (Logical Starting/Stopping & Drops)
-        # 1. Staggered Starts: Instruments enter at different moments (Sections 0, 1, 2, or 3)
-        start_section = i % 4
-        
-        # 2. Drops (0 to 4 drops per instrument): 
-        # A "drop" is a section where it doesn't play. It is guaranteed to play at start_section.
-        schedule = [start_section]
-        
-        for section_idx in range(5):
-            if section_idx <= start_section:
-                continue # Before start, or already added
-                
-            # 60% chance to continue playing in a section (40% chance of a "drop")
-            if random.random() < 0.6:
-                schedule.append(section_idx)
-                
-        # 3. Climax Guarantee: Ensure EBM Backbone hits hard in the final section
-        if (is_drum or is_bass or is_clap) and 4 not in schedule:
-            schedule.append(4)
+        schedule = []
+        if is_drum or is_bass or is_clap:
+            # Baseline Instruments: Follow sequence the whole song (~90%+ presence)
+            schedule = [0, 1, 2, 3, 4]
+            # Optional: 30% chance for a single 1-section breakdown drop (excluding intro/climax)
+            if random.random() < 0.3:
+                schedule.remove(random.choice([1, 2, 3]))
+        else:
+            # Secondary Instruments: ~40%+ presence
+            # 1. Staggered Starts: Enter at Sections 0, 1, 2, or 3
+            start_section = i % 4
+            schedule.append(start_section)
+            
+            # 2. Random continuations
+            for section_idx in range(5):
+                if section_idx <= start_section:
+                    continue
+                if random.random() < 0.6:
+                    schedule.append(section_idx)
+                    
+            # 3. GUARANTEE: All must be present in at least 2 sections
+            if len(schedule) < 2:
+                if start_section < 4:
+                    available = [s for s in range(start_section + 1, 5)]
+                    if available:
+                        schedule.append(random.choice(available))
+                else:
+                    schedule.append(0)
+                    
+            schedule = sorted(list(set(schedule)))
         
         # Build 16-step native motif for the client engine
         native_motif = [-1] * 16
