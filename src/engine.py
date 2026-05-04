@@ -81,26 +81,35 @@ class SequencerEngine:
         if not track.patterns: return
 
         for idx, section_info in enumerate(self.comp.structure):
-            # NEW: Schedule Check
+            # Schedule Check
             if track.schedule is not None and idx not in track.schedule:
                 current_time += (section_info.bars * 16 * self.step_duration)
                 continue
 
             pattern_name = section_info.section
-            pattern = track.patterns.get(pattern_name) or list(track.patterns.values())[0]
+            pattern_raw = track.patterns.get(pattern_name) or list(track.patterns.values())[0]
             
-            # Pattern is now a Dict[str, str]
-            if not isinstance(pattern, dict): continue
-
             for bar in range(section_info.bars):
-                for sound, midi_note in drum_map.items():
-                    steps = pattern.get(sound, "-" * 16)
-                    for i, step in enumerate(steps):
-                        if step == "X":
+                # Case A: Professional MIDI Note List (from ACE-Step)
+                if isinstance(pattern_raw, list):
+                    for i, note_val in enumerate(pattern_raw):
+                        if i >= 16: break
+                        if isinstance(note_val, int) and note_val > 0:
                             start = current_time + (i * self.step_duration)
-                            # Humanized note
-                            note = self._humanize_note(midi_note, start, 0.1, 100)
+                            note = self._humanize_note(note_val, start, 0.1, 100)
                             instrument.notes.append(note)
+                
+                # Case B: Rhythmic Dictionary (Traditional)
+                elif isinstance(pattern_raw, dict):
+                    for sound, midi_note in drum_map.items():
+                        steps = pattern_raw.get(sound, "-" * 16)
+                        for i, step in enumerate(steps):
+                            if i >= 16: break
+                            if step == "X":
+                                start = current_time + (i * self.step_duration)
+                                note = self._humanize_note(midi_note, start, 0.1, 100)
+                                instrument.notes.append(note)
+                
                 current_time += (16 * self.step_duration)
         
         self.pm.instruments.append(instrument)
@@ -108,9 +117,9 @@ class SequencerEngine:
     def _unwrap_pattern(self, pattern: Any) -> Any:
         """Robustly extracts a list or dict from an LLM-provided pattern object."""
         if isinstance(pattern, list): return pattern
-        if isinstance(obj := pattern, dict):
+        if isinstance(pattern, dict):
             # If it's a dict, try to find the list/string inside
-            for val in obj.values():
+            for val in pattern.values():
                 if isinstance(val, (list, str)): return val
         return pattern
 
@@ -131,28 +140,34 @@ class SequencerEngine:
             pattern = track.patterns.get(pattern_name) or list(track.patterns.values())[0]
             
             pattern = self._unwrap_pattern(pattern)
-            if not isinstance(pattern, list): continue
+            if not isinstance(pattern, (list, str)): continue
 
             for bar in range(section_info.bars):
-                for i, degree in enumerate(pattern):
-                    if i >= 16: break
-                    
-                    # Case A: Integer scale degree
-                    if isinstance(degree, int) and degree >= 0:
-                        midi_note = ScaleMapper.get_midi_note(root_midi, degree, self.comp.meta.intervals)
-                        start = current_time + (i * self.step_duration)
-                        note = self._humanize_note(midi_note, start, self.step_duration * 0.9, 100)
-                        instrument.notes.append(note)
-                    
-                    # Case B: Rhythmic string
-                    elif isinstance(degree, str) and "X" in degree.upper():
-                        for char_idx, char in enumerate(degree):
-                            if char.upper() == "X":
-                                midi_note = ScaleMapper.get_midi_note(root_midi, 0, self.comp.meta.intervals)
-                                sub_step = self.step_duration / len(degree)
-                                start = current_time + (i * self.step_duration) + (char_idx * sub_step)
-                                note = self._humanize_note(midi_note, start, sub_step * 0.9, 100)
-                                instrument.notes.append(note)
+                # Handle List (Integers or Degrees)
+                if isinstance(pattern, list):
+                    for i, val in enumerate(pattern):
+                        if i >= 16: break
+                        
+                        if isinstance(val, int) and val != -1:
+                            # Decide if this is a Degree (0-20) or Absolute Note (>20)
+                            if val > 20:
+                                midi_note = val
+                            else:
+                                midi_note = ScaleMapper.get_midi_note(root_midi, val, self.comp.meta.intervals)
+                            
+                            start = current_time + (i * self.step_duration)
+                            note = self._humanize_note(midi_note, start, self.step_duration * 0.9, 100)
+                            instrument.notes.append(note)
+                
+                # Handle Rhythmic String
+                elif isinstance(pattern, str):
+                    for i, char in enumerate(pattern):
+                        if i >= 16: break
+                        if char.upper() == "X":
+                            midi_note = ScaleMapper.get_midi_note(root_midi, 0, self.comp.meta.intervals)
+                            start = current_time + (i * self.step_duration)
+                            note = self._humanize_note(midi_note, start, self.step_duration * 0.9, 100)
+                            instrument.notes.append(note)
                 
                 current_time += (16 * self.step_duration)
 
