@@ -4,6 +4,8 @@ from pydantic import BaseModel
 from typing import List, Dict, Optional
 import uvicorn
 import os
+import random
+import requests
 import mido
 from mido import Message, MidiFile, MidiTrack, MetaMessage
 
@@ -202,7 +204,6 @@ class ResearchRequest(BaseModel):
 async def research_theory(request: ResearchRequest):
     """Secondary Director: Suggests theory based on concept."""
     print(f"ACE-Step: Researching theory for '{request.prompt}'...")
-    import random
     
     is_chill = any(k in request.prompt.lower() for k in ["chill", "ambient", "relax"])
     is_fast = any(k in request.prompt.lower() for k in ["ebm", "techno", "fast", "dance"])
@@ -237,8 +238,6 @@ class FullCompositionRequest(BaseModel):
 @app.post("/generate_full_composition")
 async def generate_full_composition(request: FullCompositionRequest):
     """Monolithic Producer: Generates the entire song in one pass using ACE-Step 'Thinking' protocol."""
-    print(f"ACE-Step: Starting PHASE 1 (Reasoning)...")
-    
     # 1. PHASE 1: GENERATE THEORY (The 'Think' Phase)
     # We force the model to reason inside <think> and stop there.
     # In this bridge demo, we simulate the LLM's 'Thinking' extraction 

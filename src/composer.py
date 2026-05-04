@@ -413,3 +413,23 @@ Translate "Style + Theme" into a professional music specification.
         except Exception as e:
             print(f"Monolithic composition failed: {e}")
             raise
+
+    def render_to_audio(self, midi_path: str):
+        """Sends the MIDI to the Steam Deck for FluidSynth rendering."""
+        print(f"--- RENDERER: Sending {os.path.basename(midi_path)} to Steam Deck ---")
+        bridge_url = "http://192.168.2.188:8000/render_wav"
+        
+        try:
+            with open(midi_path, "rb") as f:
+                files = {"file": (os.path.basename(midi_path), f, "audio/midi")}
+                response = requests.post(bridge_url, files=files, timeout=600)
+            
+            if response.status_code == 200:
+                wav_path = midi_path.replace(".mid", ".wav")
+                with open(wav_path, "wb") as f:
+                    f.write(response.content)
+                print(f"Success! Master WAV produced at: {wav_path}")
+            else:
+                print(f"Rendering failed: {response.text}")
+        except Exception as e:
+            print(f"Rendering connection failed: {e}")

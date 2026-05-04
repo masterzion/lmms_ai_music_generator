@@ -10,6 +10,7 @@ def main():
     parser.add_argument("--concept", type=str, required=True, help="Style + Theme (e.g., 'EBM about World War 2')")
     parser.add_argument("--model", type=str, default="llama3:8b", help="Ollama model name")
     parser.add_argument("--monolithic", action="store_true", help="EXPERIMENTAL: Generate entire song in one handshake")
+    parser.add_argument("--render", action="store_true", help="Render MIDI to WAV via Steam Deck")
     
     args = parser.parse_args()
 
@@ -57,6 +58,9 @@ def main():
         
         midi_data.write(final_path)
         print(f"Success! Song archived at: {final_path}")
+        
+        if args.render:
+            composer.render_to_audio(final_path)
 
 if __name__ == "__main__":
     main()

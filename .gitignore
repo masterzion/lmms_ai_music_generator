@@ -4,3 +4,4 @@ checkpoints/
 *.mid
 venv/
 __pycache__/
+temp_ace_step*
