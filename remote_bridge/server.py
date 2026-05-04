@@ -288,7 +288,7 @@ async def generate_full_composition(request: FullCompositionRequest):
     for name, t_data in tracks.items():
         track = MidiTrack()
         mid.tracks.append(track)
-        track.append(Message('track_name', name=name, time=0))
+        track.append(MetaMessage('track_name', name=name, time=0))
         for note in t_data["patterns"]["Main"]:
             if note != -1:
                 track.append(Message('note_on', note=note, velocity=90, time=0))
@@ -344,3 +344,4 @@ async def render_wav(request: Request):
 if __name__ == "__main__":
     load_model()
     uvicorn.run(app, host="0.0.0.0", port=8000)
+rt=8000)
