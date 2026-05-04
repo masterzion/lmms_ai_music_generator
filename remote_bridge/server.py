@@ -2,12 +2,19 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 import uvicorn
+import os
+
+# STEAM DECK OPTIMIZATION: Force ROCm for APU and limit memory
+os.environ["HSA_OVERRIDE_GFX_VERSION"] = "10.3.0" # Required for Steam Deck APU
+os.environ["PYTORCH_ROCM_ARCH"] = "gfx1030"
+os.environ["PYTORCH_HIP_ALLOC_CONF"] = "max_split_size_mb:128" # Prevent fragmentation
+
 import torch
 import numpy as np
 import gc
 
-# VRAM-Optimized ACE-Step Bridge
-app = FastAPI(title="ACE-Step Remote Bridge (8GB Optimized)")
+# VRAM-Optimized ACE-Step Bridge (Steam Deck / 16GB Unified Memory)
+app = FastAPI(title="ACE-Step Remote Bridge (Steam Deck Optimized)")
 
 class PatternRequest(BaseModel):
     prompt: str
@@ -19,20 +26,34 @@ class PatternResponse(BaseModel):
     pattern: List[int]
     description: str
 
-# MEMORY OPTIMIZATION: Use FP16 and clear cache
+# MEMORY OPTIMIZATION: Use BFloat16/FP16 and clear cache
 device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"ACE-Step Bridge: Starting on {device}...")
+# Detect if ROCm/AMD is used (PyTorch uses 'cuda' name for ROCm)
+is_rocm = getattr(torch.version, 'hip', None) is not None
+device_name = "ROCm/AMD" if is_rocm else ("CUDA/NVIDIA" if device == "cuda" else "CPU")
+print(f"ACE-Step Bridge: Starting on {device_name}...")
+
+# Select appropriate dtype
+if device == "cuda" and torch.cuda.is_bf16_supported():
+    dtype = torch.bfloat16
+    print("ACE-Step Bridge: Using bfloat16")
+else:
+    dtype = torch.float16 if device == "cuda" else torch.float32
+    print(f"ACE-Step Bridge: Using {dtype}")
 
 def optimize_vram():
-    """Aggressive memory cleanup to prevent core dumps."""
+    """Aggressive memory cleanup for Steam Deck's shared memory."""
     if device == "cuda":
         torch.cuda.empty_cache()
+    # On Steam Deck, we also want to be very aggressive with CPU RAM
     gc.collect()
+    # Optional: Small sleep to allow OS to reclaim pages if needed
+    # import time; time.sleep(0.1)
 
 @app.post("/generate_pattern", response_model=PatternResponse)
 async def generate_pattern(request: PatternRequest):
-    # Use inference mode to save VRAM
-    with torch.inference_mode():
+    # Use inference mode and autocast to save VRAM and use target dtype
+    with torch.inference_mode(), torch.amp.autocast(device_type=device, dtype=dtype):
         try:
             print(f"Generating optimized {request.genre} motif...")
             
