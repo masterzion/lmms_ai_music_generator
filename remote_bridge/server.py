@@ -511,7 +511,7 @@ async def render_wav(file: UploadFile = File(...)):
     print(f"ACE-Step: Rendering uploaded MIDI '{file.filename}' to WAV (Containerized Hi-Fi mode)...")
     midi_file = f"temp_{file.filename}"
     wav_file = f"temp_{file.filename.replace('.mid', '.wav')}"
-    sf2_path = "soundfonts/FluidR3_GM.sf2"
+    sf2_path = "soundfonts/SGM-V2.01.sf2"
     
     # Save the uploaded file
     with open(midi_file, "wb") as buffer:

@@ -95,11 +95,11 @@ else
     echo "To enable WAV rendering on Steam Deck, install Podman via Discover/Flatpak or system packages."
 fi
 
-echo "Checking for High-Fidelity SoundFont (FluidR3_GM)..."
+echo "Checking for High-Fidelity Electronic SoundFont (SGM-V2.01)..."
 mkdir -p soundfonts
-if [ ! -f "soundfonts/FluidR3_GM.sf2" ]; then
-    echo "Downloading FluidR3_GM.sf2..."
-    wget -c -L -O soundfonts/FluidR3_GM.sf2 "https://github.com/urish/cinto/raw/master/media/FluidR3%20GM.sf2"
+if [ ! -f "soundfonts/SGM-V2.01.sf2" ]; then
+    echo "Downloading SGM-V2.01.sf2 (236MB - Excellent for EDM/Bass)..."
+    wget -c -L -O soundfonts/SGM-V2.01.sf2 "https://archive.org/download/SGM-V2.01/SGM-V2.01.sf2"
 else
     echo "SoundFont already exists."
 fi
