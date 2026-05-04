@@ -6,57 +6,47 @@ from src.engine import SequencerEngine
 from src.schema import Composition
 
 def main():
-    parser = argparse.ArgumentParser(description="Music Maker: LLM Composer & Python Sequencer")
-    parser.add_argument("--prompt", type=str, help="Musical prompt for the LLM", default="A dark EBM track at 128 BPM in A minor")
-    parser.add_argument("--output", type=str, help="Output MIDI filename", default="output/composition.mid")
-    parser.add_argument("--mock", action="store_true", help="Use a mock composition instead of calling the LLM")
+    parser = argparse.ArgumentParser(description="Pro AI Music Sequencer")
+    parser.add_argument("--concept", type=str, required=True, help="Style + Theme (e.g., 'EBM about World War 2')")
     parser.add_argument("--model", type=str, default="llama3:8b", help="Ollama model name")
     
     args = parser.parse_args()
 
-    # Ensure output directory exists
-    os.makedirs(os.path.dirname(args.output), exist_ok=True)
-
-    if args.mock:
-        print("Using mock composition...")
-        # A simple EBM-style mock for testing
-        mock_data = {
-            "meta": {"bpm": 128, "scale": "A_minor", "swing": 0.0},
-            "structure": [{"section": "A", "bars": 4}],
-            "tracks": {
-                "drums": {
-                    "type": "drum_machine",
-                    "patterns": {
-                        "A": {
-                            "kick": "X---X---X---X---",
-                            "snare": "----X-------X---",
-                            "hat": "X-X-X-X-X-X-X-X-"
-                        }
-                    }
-                },
-                "bass": {
-                    "type": "monophonic",
-                    "root": "A1",
-                    "patterns": {"A": [0,0,3,0, 0,0,5,0, 0,0,3,0, 0,0,7,0]}
-                }
-            }
-        }
-        composition = Composition(**mock_data)
-    else:
-        print(f"Connecting to LLM ({args.model})...")
-        composer = Composer(model_name=args.model)
-        try:
-            composition = composer.compose(args.prompt)
-        except Exception as e:
-            print(f"Failed to get composition from LLM: {e}")
-            return
-
-    print(f"Generating MIDI for composition: {composition.meta.scale} @ {composition.meta.bpm} BPM")
-    engine = SequencerEngine(composition)
-    midi_data = engine.generate()
+    # --- LIBRARIAN PHASE ---
+    # Find existing folders to help the AI organize
+    base_output = "output"
+    existing_folders = []
+    if os.path.exists(base_output):
+        for root, dirs, files in os.walk(base_output):
+            if root != base_output:
+                existing_folders.append(os.path.relpath(root, base_output))
     
-    midi_data.write(args.output)
-    print(f"Success! MIDI saved to {args.output}")
+    folder_context = f"Existing folders for inspiration: {', '.join(existing_folders) if existing_folders else 'None'}"
+    full_concept = f"{args.concept}. {folder_context}"
+
+    print(f"--- Creative Director & Librarian: Starting session for '{args.concept}' ---")
+    composer = Composer(model_name=args.model)
+    
+    try:
+        composition = composer.compose(full_concept)
+    except Exception as e:
+        print(f"Failed to generate composition: {e}")
+        return
+
+    if composition:
+        print(f"Title: '{composition.meta.title}' | Genre: {composition.meta.genre} | Folder: {composition.meta.folder}")
+        
+        engine = SequencerEngine(composition)
+        midi_data = engine.generate()
+        
+        # Calculate final path
+        safe_title = "".join(c for c in composition.meta.title if c.isalnum() or c in (' ', '_')).replace(' ', '_').lower()
+        final_dir = os.path.join(base_output, composition.meta.folder)
+        os.makedirs(final_dir, exist_ok=True)
+        final_path = os.path.join(final_dir, f"{safe_title}.mid")
+        
+        midi_data.write(final_path)
+        print(f"Success! Final song saved to: {final_path}")
 
 if __name__ == "__main__":
     main()

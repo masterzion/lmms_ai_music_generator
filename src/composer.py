@@ -7,36 +7,34 @@ class Composer:
     def __init__(self, model_name: str = "llama3:8b", api_url: str = "http://192.168.2.188:11434/api/generate"):
         self.model_name = model_name
         self.api_url = api_url
-        self.system_prompt = """You are a professional music composition engine.
+        self.system_prompt = """You are a Master Music Producer and Creative Director.
 Output ONLY valid JSON. 
 
-### FORMAT RULES:
-1. DRUMS: Use a dictionary of 16-character strings. NO WRAPPERS. Example: {"kick": "X---", "snare": "----"}
-2. MELODY/BASS: Use lists of 16 integers (scale degrees). 0=Root, -1=Rest.
-3. ROOT: Must be a string like "A1", "C2", etc.
-4. TOTAL LENGTH: Sum of 'bars' in 'structure' must be 140-176.
+### YOUR TASK:
+Translate "Style + Theme" into a professional music specification.
+1. STYLE RESEARCH: Decide BPM and Scale.
+2. TRACK COUNT: Pick a RANDOM number in genre range.
+3. LIBRARIAN: Generate a 'title' and a 'folder' path (e.g., "ebm/war", "futurepop/science").
+   Look at existing folders for inspiration, or create a new one if needed.
+4. SCHEDULE: Create a dynamic arrangement [0, 1, 2...].
+
+### FORMAT:
+- META: bpm, scale, genre, title, folder, swing.
+- Use LOWERCASE for all keys. NO LETTERS for patterns.
 
 ### GOOD EXAMPLE:
 {
-  "meta": {"bpm": 128, "scale": "A_minor", "swing": 0.0},
-  "structure": [{"section": "A", "bars": 160}],
+  "meta": {"bpm": 126, "scale": "D_phrygian", "genre": "EBM", "swing": 0.0},
+  "structure": [{"section": "Intro", "bars": 8}, {"section": "Drop", "bars": 16}],
   "tracks": {
-    "drums": {
-      "type": "drum_machine",
-      "patterns": {"A": {"kick": "X---", "snare": "----", "hat": "X-X-", "clap": "----"}}
-    },
-    "bass": {
-      "type": "monophonic", "root": "A1", 
-      "patterns": {"A": [0,0,0,0, 3,3,3,3, 5,5,5,5, 7,7,7,7]}
-    }
+    "War_Drum": {"type": "drum_machine", "schedule": [0, 1], "patterns": {"Intro": {"kick": "X---"}}},
+    "Alarm_Synth": {"type": "monophonic", "schedule": [1], "patterns": {"Drop": [0, 1, 0, 1]}}
   }
 }
-
-Output JSON only. No text before or after.
 """
 
-    def get_ace_step_pattern(self, prompt: str, energy: float = 0.8) -> Optional[List[int]]:
-        """Requests a MIDI pattern from the Steam Deck / ROCm remote bridge."""
+    def get_ace_step_pattern(self, prompt: str, energy: float = 0.8) -> Optional[Dict[str, Any]]:
+        """Requests a MIDI pattern and a Start/Stop schedule from the Steam Deck bridge."""
         import mido
         import io
         bridge_url = self.api_url.replace(":11434/api/generate", ":8000/generate_pattern")
@@ -49,29 +47,31 @@ Output JSON only. No text before or after.
                 stream=True
             )
             if response.status_code == 200:
-                print("Bridge Handshake Successful. Downloading pattern...")
-                # Load the MIDI file from the binary response stream
+                print("Bridge Handshake Successful. Downloading pattern and schedule...")
+                
+                # Extract schedule from header
+                schedule_raw = response.headers.get("X-Schedule", "")
+                schedule = [int(x) for x in schedule_raw.split(",") if x.strip()]
+                
+                # Load the MIDI file
                 midi_data = io.BytesIO(response.content)
                 mid = mido.MidiFile(file=midi_data)
                 
-                # Extract pattern (reverse the 60+note logic from server)
                 pattern = []
                 for track in mid.tracks:
                     for msg in track:
                         if msg.type == 'note_on':
                             pattern.append(msg.note - 60)
                         elif msg.type == 'note_off' and msg.time > 0:
-                            # Handle rests (if the time between notes is large)
-                            rests = msg.time // 120 # 120 ticks = 16th note
+                            rests = msg.time // 120
                             pattern.extend([-1] * (rests - 1))
                 
-                print(f"Extracted {len(pattern)} notes from bridge MIDI.")
-                # Ensure it's exactly the requested length (usually 16)
-                return pattern[:16]
+                print(f"Extracted {len(pattern)} notes. Schedule: {schedule}")
+                return {"pattern": pattern[:16], "schedule": schedule}
             else:
                 print(f"Bridge Error: Status Code {response.status_code}")
         except Exception as e:
-            print(f"Bridge connection failed (Offline?): {e}")
+            print(f"Bridge connection failed: {e}")
             return None
         return None
 
@@ -104,7 +104,31 @@ Output JSON only. No text before or after.
                 
                 # Parse and validate
                 data = json.loads(raw_json)
-                return Composition(**data)
+                
+                # RECURSIVE LOWERCASE (Robustness for capitalized keys)
+                def lowercase_keys(obj):
+                    if isinstance(obj, dict):
+                        return {k.lower(): lowercase_keys(v) for k, v in obj.items()}
+                    if isinstance(obj, list):
+                        return [lowercase_keys(i) for i in obj]
+                    return obj
+                
+                data = lowercase_keys(data)
+                comp = Composition(**data)
+
+                # POST-PROCESS: Get schedules from Bridge for each track
+                print("--- Refining Arrangement via Bridge ---")
+                for name, track in comp.tracks.items():
+                    bridge_data = self.get_ace_step_pattern(name, energy=track.density or 0.6)
+                    if bridge_data:
+                        # Use the Bridge pattern if track pattern is missing or for higher quality
+                        pattern_name = list(track.patterns.keys())[0] if track.patterns else "A"
+                        if not track.patterns: track.patterns = {}
+                        track.patterns[pattern_name] = bridge_data["pattern"]
+                        # Apply the Start/Stop schedule
+                        track.schedule = bridge_data["schedule"]
+                
+                return comp
                 
             except Exception as e:
                 error_msg = str(e)

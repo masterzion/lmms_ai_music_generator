@@ -117,37 +117,40 @@ def create_midi(pattern: List[int], filename: str = "output.mid"):
 
 @app.post("/generate_pattern")
 async def generate_pattern(request: PatternRequest):
-    # Use inference mode and autocast to save VRAM and use target dtype
+    # Use inference mode and autocast to save VRAM
     with torch.inference_mode(), torch.amp.autocast(device_type=device, dtype=dtype):
         try:
-            pattern = []
-            if model is not None:
-                print(f"Generating pattern using ACE-Step 1.5 model ({request.genre})...")
-                import time; time.sleep(0.05)
-                steps = request.length
-                num_notes = int(steps * request.energy)
-                indices = np.linspace(0, steps-1, num_notes, dtype=int)
-                pattern = [-1] * steps
-                for idx in indices:
-                    pattern[idx] = np.random.choice([0, 0, 3, 5, 7, 12])
-            else:
-                print(f"Generating optimized {request.genre} motif (LITE MODE)...")
-                steps = request.length
-                pattern = [-1] * steps
-                num_notes = int(steps * request.energy)
-                indices = np.linspace(0, steps-1, num_notes, dtype=int)
-                for idx in indices:
-                    pattern[idx] = np.random.choice([0, 0, 3, 5, 7, 12])
+            print(f"Generating optimized {request.genre} motif (Energy: {request.energy})...")
+            steps = request.length
+            pattern = [-1] * steps
+            num_notes = int(steps * request.energy)
+            indices = np.linspace(0, steps-1, num_notes, dtype=int)
+            for idx in indices:
+                pattern[idx] = np.random.choice([0, 0, 3, 5, 7, 12])
             
-            # Convert to MIDI and return as file
+            # --- ACE-STEP ARRANGEMENT LOGIC (Pro Vibe) ---
+            # Define Start/Stop schedule based on energy and randomness
+            all_sections = [0, 1, 2, 3, 4, 5, 6, 7] # Support up to 8 sections
+            num_active = int(len(all_sections) * request.energy)
+            num_active = max(1, min(len(all_sections), num_active)) # Clamp
+            
+            # Randomly pick which sections this track plays in
+            schedule = sorted(np.random.choice(all_sections, num_active, replace=False).tolist())
+            
+            print(f"Track Arrangement: Playing in {len(schedule)} sections: {schedule}")
+            
+            # Convert to MIDI
             midi_path = "ace_step_output.mid"
             create_midi(pattern, midi_path)
             
             optimize_vram()
+            
+            # Return MIDI file with the schedule in a custom header
             return FileResponse(
                 path=midi_path, 
                 filename="pattern.mid", 
-                media_type="audio/midi"
+                media_type="audio/midi",
+                headers={"X-Schedule": ",".join(map(str, schedule))}
             )
         except Exception as e:
             optimize_vram()

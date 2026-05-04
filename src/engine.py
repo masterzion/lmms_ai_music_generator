@@ -84,7 +84,12 @@ class SequencerEngine:
         
         if not track.patterns: return
 
-        for section_info in self.comp.structure:
+        for idx, section_info in enumerate(self.comp.structure):
+            # NEW: Schedule Check
+            if track.schedule is not None and idx not in track.schedule:
+                current_time += (section_info.bars * 16 * self.step_duration)
+                continue
+
             pattern_name = section_info.section
             pattern = track.patterns.get(pattern_name) or list(track.patterns.values())[0]
             
@@ -113,23 +118,39 @@ class SequencerEngine:
         
         if not track.patterns: return
 
-        for section_info in self.comp.structure:
+        for idx, section_info in enumerate(self.comp.structure):
+            # NEW: Schedule Check
+            if track.schedule is not None and idx not in track.schedule:
+                current_time += (section_info.bars * 16 * self.step_duration)
+                continue
+
             pattern_name = section_info.section
             pattern = track.patterns.get(pattern_name) or list(track.patterns.values())[0]
             
-            # Ensure it's a list of ints
-            if not isinstance(pattern, list): continue
-
-            for bar in range(section_info.bars):
-                for i, degree in enumerate(pattern):
-                    if i >= 16: break
-                    if degree >= 0:
-                        midi_note = ScaleMapper.get_midi_note(root_note, scale_type, degree)
-                        start = current_time + (i * self.step_duration)
-                        # Humanized note
-                        note = self._humanize_note(midi_note, start, self.step_duration * 0.9, 100)
-                        instrument.notes.append(note)
-                current_time += (16 * self.step_duration)
+            # Robustness: Support BOTH List[int] and List[str] (rhythmic triggers)
+            for i, degree in enumerate(pattern):
+                if i >= 16: break
+                
+                # Case A: Integer scale degree
+                if isinstance(degree, int) and degree >= 0:
+                    midi_note = ScaleMapper.get_midi_note(root_note, scale_type, degree)
+                    start = current_time + (i * self.step_duration)
+                    note = self._humanize_note(midi_note, start, self.step_duration * 0.9, 100)
+                    instrument.notes.append(note)
+                
+                # Case B: Rhythmic string (e.g., "X---") - treat as trigger for Root (0)
+                elif isinstance(degree, str) and "X" in degree.upper():
+                    # If it's a list of 16-char strings, we need a sub-loop
+                    for char_idx, char in enumerate(degree):
+                        if char.upper() == "X":
+                            midi_note = ScaleMapper.get_midi_note(root_note, scale_type, 0)
+                            # Sub-step duration if the string is longer than 1
+                            sub_step = self.step_duration / len(degree)
+                            start = current_time + (i * self.step_duration) + (char_idx * sub_step)
+                            note = self._humanize_note(midi_note, start, sub_step * 0.9, 100)
+                            instrument.notes.append(note)
+                
+            current_time += (16 * self.step_duration)
 
         self.pm.instruments.append(instrument)
 
@@ -144,7 +165,12 @@ class SequencerEngine:
         source = track.motifs if track.motifs else track.patterns
         if not source: return
 
-        for section_info in self.comp.structure:
+        for idx, section_info in enumerate(self.comp.structure):
+            # NEW: Schedule Check
+            if track.schedule is not None and idx not in track.schedule:
+                current_time += (section_info.bars * 16 * self.step_duration)
+                continue
+
             motif_name = section_info.section
             motif = source.get(motif_name) or list(source.values())[0]
             
@@ -154,12 +180,21 @@ class SequencerEngine:
             for bar in range(section_info.bars):
                 for i, degree in enumerate(motif):
                     if i >= 16: break
-                    midi_note = ScaleMapper.get_midi_note(root_note, scale_type, degree)
+                    if degree == -1: continue
+
                     start = current_time + (i * self.step_duration)
+                    
+                    # NEW: Chord Support (handle nested lists)
+                    degrees = degree if isinstance(degree, list) else [degree]
+                    
                     if np.random.random() < (track.density or 0.6):
-                        # Humanized note
-                        note = self._humanize_note(midi_note, start, self.step_duration * 2, 80)
-                        instrument.notes.append(note)
+                        for d in degrees:
+                            if d == -1: continue
+                            midi_note = ScaleMapper.get_midi_note(root_note, scale_type, d)
+                            # Humanized note
+                            note = self._humanize_note(midi_note, start, self.step_duration * 2, 80)
+                            instrument.notes.append(note)
+                
                 current_time += (16 * self.step_duration)
 
         self.pm.instruments.append(instrument)
