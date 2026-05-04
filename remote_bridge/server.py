@@ -228,17 +228,31 @@ Task: Design the musical theory foundation for: {request.prompt}
 """
     
     try:
+        # Using Streaming for Progress Visualization
+        print(f"ACE-Step: [Thinking] ", end="", flush=True)
         response = requests.post(
             "http://127.0.0.1:11434/api/generate",
             json={
                 "model": "qwen2.5:7b",
                 "prompt": thought_prompt,
                 "system": request.system_prompt,
-                "stream": False
+                "stream": True
             },
+            stream=True,
             timeout=300
         )
-        raw_output = response.json().get("response", "")
+        
+        raw_output = ""
+        for line in response.iter_lines():
+            if line:
+                chunk = json.loads(line.decode('utf-8'))
+                token = chunk.get("response", "")
+                raw_output += token
+                print(".", end="", flush=True)
+                if chunk.get("done"):
+                    print(" [Done]")
+                    break
+        
         json_match = re.search(r'\{.*\}', raw_output, re.DOTALL)
         if json_match:
             data = json.loads(json_match.group(0))
@@ -303,23 +317,30 @@ User request: {request.prompt}
     
     print(f"ACE-Step: DEEP THINKING ACTIVATED. Calling Ollama with Theory Recommendations...")
     try:
-        # Call Ollama synchronous to extract true CoT
+        # Call Ollama Streaming to visualize progress
+        print(f"ACE-Step: [Orchestrating] ", end="", flush=True)
         ollama_response = requests.post(
             "http://127.0.0.1:11434/api/generate",
             json={
                 "model": "qwen2.5:7b",
                 "prompt": thought_prompt,
                 "system": request.system_prompt,
-                "stream": False,
-                "options": {
-                    "temperature": 0.8,
-                    "num_ctx": 4096
-                }
+                "stream": True
             },
+            stream=True,
             timeout=14400
         )
-        ollama_data = ollama_response.json()
-        raw_output = ollama_data.get("response", "")
+        
+        raw_output = ""
+        for line in ollama_response.iter_lines():
+            if line:
+                chunk = json.loads(line.decode('utf-8'))
+                token = chunk.get("response", "")
+                raw_output += token
+                print(".", end="", flush=True)
+                if chunk.get("done"):
+                    print(" [Done]")
+                    break
         
         # Regex to strip out <think> and grab JSON
         json_match = re.search(r'\{.*\}', raw_output, re.DOTALL)
