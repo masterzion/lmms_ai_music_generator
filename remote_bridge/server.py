@@ -264,8 +264,32 @@ async def generate_full_composition(request: FullCompositionRequest):
     track_names = ["Drum_Kit", "Sub_Bass", "Chord_Pad", "Lead_Arp", "Acid_Line", "Vox_Effect", "Industrial_Claps", "Strings", "Riser", "Hook"]
     tracks = {}
     
-    # 3. GENERATE ALL TRACKS AT ONCE (Full 160 Bars)
-    total_bars = 160
+    # 3. GENERATE ALL TRACKS AT ONCE
+    is_future_pop = "future pop" in request.prompt.lower()
+    if is_future_pop:
+        song_structure = [
+            {"section": "Intro", "bars": 8},
+            {"section": "Verse 1", "bars": 16},
+            {"section": "Pre-Chorus 1", "bars": 8},
+            {"section": "Chorus 1", "bars": 16},
+            {"section": "Verse 2", "bars": 16},
+            {"section": "Pre-Chorus 2", "bars": 8},
+            {"section": "Chorus 2", "bars": 16},
+            {"section": "Bridge", "bars": 16},
+            {"section": "Final Chorus", "bars": 32},
+            {"section": "Outro", "bars": 16}
+        ]
+    else:
+        song_structure = [
+            {"section": "A", "bars": 32},
+            {"section": "B", "bars": 32},
+            {"section": "C", "bars": 32},
+            {"section": "D", "bars": 32},
+            {"section": "E", "bars": 32}
+        ]
+    
+    num_sections = len(song_structure)
+    total_bars = sum(sec["bars"] for sec in song_structure)
     steps_per_bar = 16
     total_steps = total_bars * steps_per_bar
     
@@ -318,18 +342,18 @@ async def generate_full_composition(request: FullCompositionRequest):
         schedule = []
         if is_drum or is_bass or is_clap:
             # Baseline Instruments: Follow sequence the whole song (~90%+ presence)
-            schedule = [0, 1, 2, 3, 4]
+            schedule = list(range(num_sections))
             # Optional: 30% chance for a single 1-section breakdown drop (excluding intro/climax)
-            if random.random() < 0.3:
-                schedule.remove(random.choice([1, 2, 3]))
+            if random.random() < 0.3 and num_sections > 3:
+                schedule.remove(random.choice(range(1, num_sections - 1)))
         else:
             # Secondary Instruments: ~40%+ presence
             # 1. Staggered Starts: Enter at Sections 0, 1, 2, or 3
-            start_section = i % 4
+            start_section = i % min(4, num_sections)
             schedule.append(start_section)
             
             # 2. Random continuations
-            for section_idx in range(5):
+            for section_idx in range(num_sections):
                 if section_idx <= start_section:
                     continue
                 if random.random() < 0.6:
@@ -337,8 +361,8 @@ async def generate_full_composition(request: FullCompositionRequest):
                     
             # 3. GUARANTEE: All must be present in at least 2 sections
             if len(schedule) < 2:
-                if start_section < 4:
-                    available = [s for s in range(start_section + 1, 5)]
+                if start_section < num_sections - 1:
+                    available = [s for s in range(start_section + 1, num_sections)]
                     if available:
                         schedule.append(random.choice(available))
                 else:
@@ -354,11 +378,13 @@ async def generate_full_composition(request: FullCompositionRequest):
             
         # We also build the server-side full pattern for the local debug MIDI
         full_pattern = [-1] * total_steps
-        for s_idx in schedule:
-            start_step = s_idx * 32 * 16
-            end_step = (s_idx + 1) * 32 * 16
-            for step in range(start_step, end_step):
-                full_pattern[step] = native_motif[step % 16]
+        current_step = 0
+        for s_idx, sec in enumerate(song_structure):
+            sec_steps = sec["bars"] * 16
+            if s_idx in schedule:
+                for step in range(current_step, current_step + sec_steps):
+                    full_pattern[step] = native_motif[step % 16]
+            current_step += sec_steps
                 
         tracks[name] = {
             "type": "polyphonic",
@@ -389,13 +415,7 @@ async def generate_full_composition(request: FullCompositionRequest):
             "root_midi": root_midi, "genre": f"Monolithic {scale_name} production",
             "title": f"Mono_{random.randint(100, 999)}", "folder": "monolithic"
         },
-        "structure": [
-            {"section": "A", "bars": 32},
-            {"section": "B", "bars": 32},
-            {"section": "C", "bars": 32},
-            {"section": "D", "bars": 32},
-            {"section": "E", "bars": 32}
-        ],
+        "structure": song_structure,
         "tracks": tracks
     }
 from fastapi import Request, UploadFile, File, HTTPException
