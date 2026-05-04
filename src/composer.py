@@ -387,19 +387,33 @@ Translate "Style + Theme" into a professional music specification.
         print(f"--- MONOLITHIC MODE: Delegating entire song to ACE-Step ---")
         bridge_url = "http://192.168.2.188:8000/generate_full_composition"
         
-        # Build the Simplified Master Prompt for Maximum Creativity
+        # Build the Ultimate Professional Master Prompt
         master_prompt = f"""
-        PRODUCE A FULL COMPOSITION FOR: "{user_request}"
+        PRODUCE A HIGH-FIDELITY, PROFESSIONAL-GRADE MASTER COMPOSITION FOR: "{user_request}"
         
-        FOUNDATIONAL RULES:
-        1. DURATION: Minimum 4 minutes.
-        2. ORCHESTRATION: Minimum 10 instruments. All must be ACTIVE (No silent tracks). MANDATORY: Every single instrument MUST generate notes. 0-note tracks are STRICTLY FORBIDDEN.
-        3. PERCUSSION: MANDATORY dedicated 'Beat' and 'Clap' tracks tailored to the musical style.
-        4. RHYTHM: FORCE a driving, consistent beat foundation.
-        5. CADENCE: ALTERNATE the rhythmic phrasing between instruments (Ensuring they don't all play at once; create dynamic space).
-        6. ARRANGEMENT: Implement logical STARTING and STOPPING. Ensure smooth TRANSITIONS and logical energy shifts between sections.
+        You are an elite, multi-platinum EDM/Industrial music producer and audio engineer. 
+        Your goal is to orchestrate a pristine, club-ready, dynamic track that rivals top-tier professional releases.
         
-        Let the music flow. Output ONLY the JSON.
+        FOUNDATIONAL STUDIO RULES:
+        1. DURATION: Minimum 4 minutes of evolving, hypnotic arrangement.
+        2. ORCHESTRATION: Minimum 10 distinct instruments. All must be ACTIVE (No silent tracks). MANDATORY: Every single instrument MUST generate notes. 0-note tracks are STRICTLY FORBIDDEN.
+        
+        RHYTHM & GROOVE MECHANICS:
+        3. PERCUSSION: MANDATORY dedicated 'Beat' (Kicks/Snares) and 'Industrial_Claps' tracks.
+        4. FOUNDATION: FORCE a relentlessly driving, quantized beat foundation. The groove must lock the listener in.
+        5. SYNCOPATION: Implement off-beat hi-hats and syncopated percussion hits to create complex rhythmic pockets.
+        
+        ARRANGEMENT & DYNAMICS:
+        6. TENSION & RELEASE: Masterful use of energy. Build massive tension using Risers and fast arpeggios. Release the tension into devastating, high-energy drops where the Sub-Bass and Kick hit with maximum impact.
+        7. STAGGERED ENTRIES: Do not start all instruments at once. Introduce elements sequentially (Intro -> Build -> Drop -> Breakdown -> Climax -> Outro).
+        8. CADENCE (CALL-AND-RESPONSE): ALTERNATE the rhythmic phrasing between lead synths and basslines (create dynamic space, avoid mud).
+        
+        FREQUENCY SPREAD & SOUND DESIGN:
+        9. THE LOW END: Ensure the Sub-Bass is strictly isolated in the lowest octaves. It must pulse with the Kick.
+        10. THE MID-RANGE: Use rich, wide Chord Pads and driving Acid Lines to fill the spectrum without clashing.
+        11. THE HIGH END: Crystal clear Leads, aggressive Vox Effects, and sharp metallic percussions piercing the top frequencies.
+        
+        EXECUTE THE VISION. Output ONLY the meticulously structured JSON.
         """
         
         try:
