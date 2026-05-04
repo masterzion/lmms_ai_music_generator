@@ -258,14 +258,20 @@ async def generate_full_composition(request: FullCompositionRequest):
     steps_per_bar = 16
     total_steps = total_bars * steps_per_bar
     
-    for name in track_names:
+    for i, name in enumerate(track_names):
         is_drum = any(k in name.lower() for k in ["drum", "kick", "perc", "808", "beat"])
         motif_len = 4 if is_drum else 8
+        
+        # CADENCE LOGIC: Shift the starting point for non-drum instruments
+        # This creates the "Alternating" feel
+        offset = 0 if is_drum else (i % 4) * 2
         
         # Create the Hook/Groove
         motif = []
         for _ in range(motif_len):
-            if random.random() < 0.6:
+            # FORCE BEATS: Drums have higher probability (0.8)
+            prob = 0.8 if is_drum else 0.5
+            if random.random() < prob:
                 if is_drum:
                     motif.append(random.choice([36, 38, 42])) # Kick, Snare, Hat
                 else:
@@ -273,8 +279,12 @@ async def generate_full_composition(request: FullCompositionRequest):
             else:
                 motif.append(-1)
         
-        # Tile across ALL bars
-        full_pattern = [motif[i % motif_len] for i in range(total_steps)]
+        # Tile across ALL bars with Cadence Offset
+        full_pattern = [-1] * total_steps
+        for step in range(total_steps):
+            m_idx = (step - offset) % motif_len
+            if step >= offset:
+                full_pattern[step] = motif[m_idx]
         
         tracks[name] = {
             "type": "polyphonic",
