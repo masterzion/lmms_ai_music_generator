@@ -314,38 +314,46 @@ async def generate_full_composition(request: FullCompositionRequest):
                 val = root_midi + random.choice(intervals)
                 motif[0] = max(0, min(127, val))
         
-        # ARRANGEMENT LOGIC (Logical Starting/Stopping)
-        # 0 = Always play, 1 = Section A, 2 = Section B, 3 = Bridge/Breakdown
-        # For simplicity in monolithic demo, we use a 'Probability Schedule' 
-        # that varies every 32 bars.
-        schedule = []
-        for section_idx in range(5): # 160 bars / 32 = 5 large sections
-            # Drums and Bass play in most sections
-            if is_drum or is_bass:
-                if section_idx != 3: # Drop out in Section 4 for a breakdown
-                    schedule.append(section_idx)
-            else:
-                # Other instruments alternate (e.g., Strings only in 2 and 5)
-                if (i + section_idx) % 3 == 0:
-                    schedule.append(section_idx)
+        # ARRANGEMENT LOGIC (Logical Starting/Stopping & Drops)
+        # 1. Staggered Starts: Instruments enter at different moments (Sections 0, 1, 2, or 3)
+        start_section = i % 4
         
-        # If schedule is empty, force at least one section
-        if not schedule: schedule = [0]
+        # 2. Drops (0 to 4 drops per instrument): 
+        # A "drop" is a section where it doesn't play. It is guaranteed to play at start_section.
+        schedule = [start_section]
         
-        # Build the full 160-bar pattern based on the schedule
+        for section_idx in range(5):
+            if section_idx <= start_section:
+                continue # Before start, or already added
+                
+            # 60% chance to continue playing in a section (40% chance of a "drop")
+            if random.random() < 0.6:
+                schedule.append(section_idx)
+                
+        # 3. Climax Guarantee: Ensure EBM Backbone hits hard in the final section
+        if (is_drum or is_bass or is_clap) and 4 not in schedule:
+            schedule.append(4)
+        
+        # Build 16-step native motif for the client engine
+        native_motif = [-1] * 16
+        for step in range(16):
+            m_idx = (step - offset) % motif_len
+            native_motif[step] = motif[m_idx]
+            
+        # We also build the server-side full pattern for the local debug MIDI
         full_pattern = [-1] * total_steps
         for s_idx in schedule:
             start_step = s_idx * 32 * 16
             end_step = (s_idx + 1) * 32 * 16
             for step in range(start_step, end_step):
-                m_idx = (step - offset) % motif_len
-                full_pattern[step] = motif[m_idx]
+                full_pattern[step] = native_motif[step % 16]
                 
         tracks[name] = {
             "type": "polyphonic",
             "density": 0.7,
-            "patterns": {"Main": full_pattern},
-            "schedule": [0] # Pattern is already baked with silence
+            "patterns": {"Main": native_motif},
+            "schedule": schedule,
+            "_full_pattern": full_pattern # Internal use for server MIDI
         }
     
     # Save the MASTER MIDI for rendering (Full 4-minute sequence)
@@ -354,7 +362,7 @@ async def generate_full_composition(request: FullCompositionRequest):
         track = MidiTrack()
         mid.tracks.append(track)
         track.append(MetaMessage('track_name', name=name, time=0))
-        for note in t_data["patterns"]["Main"]:
+        for note in t_data["_full_pattern"]:
             if note != -1:
                 track.append(Message('note_on', note=note, velocity=90, time=0))
                 track.append(Message('note_off', note=note, velocity=0, time=120))
@@ -369,14 +377,21 @@ async def generate_full_composition(request: FullCompositionRequest):
             "root_midi": root_midi, "genre": f"Monolithic {scale_name} production",
             "title": f"Mono_{random.randint(100, 999)}", "folder": "monolithic"
         },
-        "structure": [{"section": "Main", "bars": total_bars}],
+        "structure": [
+            {"section": "A", "bars": 32},
+            {"section": "B", "bars": 32},
+            {"section": "C", "bars": 32},
+            {"section": "D", "bars": 32},
+            {"section": "E", "bars": 32}
+        ],
         "tracks": tracks
     }
+from fastapi import Request, UploadFile, File, HTTPException
+import shutil
+
 @app.post("/render_wav")
-async def render_wav(request: Request):
-    """Renders the last generated MIDI into a high-quality WAV using Podman."""
-    import shutil
-    
+async def render_wav(file: UploadFile = File(...)):
+    """Renders the uploaded MIDI into a high-quality WAV using Podman."""
     # Check for Podman instead of FluidSynth
     if not shutil.which("podman"):
         raise HTTPException(
@@ -384,13 +399,14 @@ async def render_wav(request: Request):
             detail="Podman not found. Containerized rendering is not available."
         )
 
-    print("ACE-Step: Rendering MIDI to WAV (Containerized Hi-Fi mode)...")
-    midi_file = "ace_step_output.mid"
-    wav_file = "ace_step_output.wav"
+    print(f"ACE-Step: Rendering uploaded MIDI '{file.filename}' to WAV (Containerized Hi-Fi mode)...")
+    midi_file = f"temp_{file.filename}"
+    wav_file = f"temp_{file.filename.replace('.mid', '.wav')}"
     sf2_path = "soundfonts/FluidR3_GM.sf2"
     
-    if not os.path.exists(midi_file):
-        raise HTTPException(status_code=404, detail="No MIDI file found to render.")
+    # Save the uploaded file
+    with open(midi_file, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
     
     # Run FluidSynth via Podman
     import subprocess
@@ -415,15 +431,19 @@ async def render_wav(request: Request):
         
         if not os.path.exists(wav_file):
             raise Exception("FluidSynth failed to produce a WAV file.")
-
+            
+        from fastapi.responses import FileResponse
         return FileResponse(
-            path=wav_file,
-            filename="production.wav",
+            path=wav_file, 
+            filename=wav_file,
             media_type="audio/wav"
         )
+        
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"FluidSynth rendering failed: {e}")
     except Exception as e:
-        print(f"Rendering failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     load_model()
