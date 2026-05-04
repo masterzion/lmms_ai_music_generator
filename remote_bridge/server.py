@@ -262,14 +262,32 @@ async def generate_full_composition(request: FullCompositionRequest):
     print(f"ACE-Step: reasoning complete. BPM: {bpm}, Scale: {scale_name}")
     print(f"ACE-Step: PHASE 2 (MIDI Generation) with forced generation_phase='midi'...")
     
-    # 2. DEFINE TRACKS
-    track_names = ["Drum_Kit", "Sub_Bass", "Chord_Pad", "Lead_Arp", "Acid_Line", "Vox_Effect", "Industrial_Claps", "Strings", "Riser", "Hook"]
-    tracks = {}
-    
-    # 3. GENERATE ALL TRACKS AT ONCE
     prompt_lower = request.prompt.lower()
     is_future_pop = "<future pop>" in prompt_lower
     is_chillout = "<chillout>" in prompt_lower
+    
+    # 2. DEFINE TRACKS DYNAMICALLY BASED ON TAG
+    if is_future_pop:
+        track_names = [
+            "Drum_Kit", "Industrial_Claps", "Sub_Bass", "Pop_Pluck", 
+            "Vocal_Chops", "Main_Lead", "Wide_Pad", "Guitar_Strum", 
+            "Arp_Synth", "Riser", "Impact", "Sub_Growl", "Noise_Sweep", "Chorus_Harmony"
+        ]
+    elif is_chillout:
+        track_names = [
+            "Drum_Kit", "Industrial_Claps", "Deep_Sub", "Atmosphere_Pad",
+            "Foley_Texture", "Electric_Piano", "Soft_Pluck", "Ethereal_Vox"
+        ]
+    else:
+        # Default EBM
+        track_names = [
+            "Drum_Kit", "Industrial_Claps", "Sub_Bass", "Acid_Line", 
+            "Distorted_Lead", "Noise_Perc", "Dark_Pad", "Vocal_Shout", "Riser", "FM_Bass"
+        ]
+        
+    tracks = {}
+    
+    # 3. GENERATE ALL TRACKS AT ONCE
     
     if is_future_pop:
         song_structure = [
