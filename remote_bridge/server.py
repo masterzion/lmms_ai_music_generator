@@ -298,24 +298,33 @@ async def generate_full_composition(request: FullCompositionRequest):
     is_future_pop = "<future pop>" in prompt_lower
     is_chillout = "<chillout>" in prompt_lower
     
-    # 2. DEFINE TRACKS DYNAMICALLY BASED ON TAG
-    if is_future_pop:
-        track_names = [
-            "Drum_Kit", "Industrial_Claps", "Sub_Bass", "Pop_Pluck", 
-            "Vocal_Chops", "Main_Lead", "Wide_Pad", "Guitar_Strum", 
-            "Arp_Synth", "Riser", "Impact", "Sub_Growl", "Noise_Sweep", "Chorus_Harmony"
-        ]
-    elif is_chillout:
-        track_names = [
-            "Drum_Kit", "Industrial_Claps", "Deep_Sub", "Atmosphere_Pad",
-            "Foley_Texture", "Electric_Piano", "Soft_Pluck", "Ethereal_Vox"
-        ]
-    else:
-        # Default EBM
-        track_names = [
-            "Drum_Kit", "Industrial_Claps", "Sub_Bass", "Acid_Line", 
-            "Distorted_Lead", "Noise_Perc", "Dark_Pad", "Vocal_Shout", "Riser", "FM_Bass"
-        ]
+    # SGM-V2.01 Instrument Mapping
+    instrument_map = {
+        "drum_kit": 25, "industrial_claps": 25, "noise_perc": 25, # TR-808 Kit (Ch 10)
+        "sub_bass": 39, "acid_line": 38, "fm_bass": 38, "deep_sub": 32, "sub_growl": 87,
+        "distorted_lead": 81, "pop_pluck": 80, "main_lead": 81, "arp_synth": 80, "soft_pluck": 108,
+        "dark_pad": 93, "wide_pad": 89, "atmosphere_pad": 88,
+        "vocal_shout": 54, "vocal_chops": 53, "chorus_harmony": 52, "ethereal_vox": 91,
+        "riser": 103, "noise_sweep": 96, "impact": 119, "foley_texture": 97,
+        "guitar_strum": 27, "electric_piano": 4
+    }
+
+    # 2. DEFINE TRACKS DYNAMICALLY BASED ON LLM JSON
+    valid_keys = list(instrument_map.keys())
+    track_names = []
+    for name in llm_tracks.keys():
+        if name.lower() in valid_keys:
+            track_names.append(name)
+            
+    # Fallback to default sets if the LLM completely hallucinated garbage or failed
+    if len(track_names) < 4:
+        print("ACE-Step: Warning: LLM tracks invalid or too few. Falling back to default genre lists.")
+        if is_future_pop:
+            track_names = ["Drum_Kit", "Industrial_Claps", "Sub_Bass", "Pop_Pluck", "Vocal_Chops", "Main_Lead", "Wide_Pad"]
+        elif is_chillout:
+            track_names = ["Drum_Kit", "Deep_Sub", "Atmosphere_Pad", "Ethereal_Vox", "Soft_Pluck"]
+        else:
+            track_names = ["Drum_Kit", "Industrial_Claps", "Sub_Bass", "Acid_Line", "Distorted_Lead", "Dark_Pad"]
         
     tracks = {}
     
@@ -473,17 +482,6 @@ async def generate_full_composition(request: FullCompositionRequest):
     
     # Save the MASTER MIDI for rendering (Full 4-minute sequence)
     mid = MidiFile()
-    
-    # SGM-V2.01 Instrument Mapping
-    instrument_map = {
-        "drum_kit": 25, "industrial_claps": 25, "noise_perc": 25, # TR-808 Kit (Ch 10)
-        "sub_bass": 39, "acid_line": 38, "fm_bass": 38, "deep_sub": 32, "sub_growl": 87,
-        "distorted_lead": 81, "pop_pluck": 80, "main_lead": 81, "arp_synth": 80, "soft_pluck": 108,
-        "dark_pad": 93, "wide_pad": 89, "atmosphere_pad": 88,
-        "vocal_shout": 54, "vocal_chops": 53, "chorus_harmony": 52, "ethereal_vox": 91,
-        "riser": 103, "noise_sweep": 96, "impact": 119, "foley_texture": 97,
-        "guitar_strum": 27, "electric_piano": 4
-    }
     
     channel_allocator = 0
     for name, t_data in tracks.items():
