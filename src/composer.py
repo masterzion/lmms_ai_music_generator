@@ -392,13 +392,28 @@ Translate "Style + Theme" into a professional music specification.
         if "<future pop>" in req_lower:
             genre_name = "Future Pop"
             track_limits = "12 to 24 tracks (dense, highly layered, commercial pop production)."
+            style_guidelines = """
+        - RHYTHM & TIME: 4/4 time signature is standard, but you may occasionally use heavy syncopation or a swinging groove.
+        - SUB-BASS & LOW END: Use a bouncy, sidechained sub-bass. The bassline should follow the chord progression, often using 8th-note or off-beat pumping patterns.
+        - MOOD & AGGRESSION: High-energy, melodic, and emotionally uplifting or slightly melancholic. Not overly aggressive. Focus on catchy vocal chops and lush, wide synths.
+        - TEXTURE: Clean, polished, and commercial-ready."""
         elif "<chillout>" in req_lower:
             genre_name = "Chillout/Ambient"
             track_limits = "6 to 12 tracks (minimalist, spacious, and atmospheric)."
+            style_guidelines = """
+        - RHYTHM & TIME: Usually 4/4, but feel free to experiment with slower 3/4 or 6/8 polyrhythms for a drifting, weightless sensation.
+        - SUB-BASS & LOW END: Deep, sustained, and evolving sub-bass. The bass should move slowly (whole notes or half notes) to create a warm, grounding foundation.
+        - MOOD & AGGRESSION: Zero aggression. The mood must be serene, hypnotic, introspective, and peaceful.
+        - TEXTURE: Extremely spacious. Heavy use of reverb, delay, foley textures (rain, vinyl crackle), and evolving cinematic pads."""
         else:
             # Default fallback if no tag or <ebm>
             genre_name = "Electronic Body Music (EBM)"
             track_limits = "8 to 14 tracks (focused, driving, and powerful)."
+            style_guidelines = """
+        - RHYTHM & TIME: Strictly a relentless 4/4 "four-on-the-floor" time signature to drive the dancefloor.
+        - SUB-BASS & LOW END: FORCED 16th-note driving sub-bass and sequenced acid basslines. The bass must be highly repetitive, oscillating, and mechanically precise.
+        - MOOD & AGGRESSION: Hard, intense, dark, and transgressive. It must feel like a cold, military-industrial factory. 
+        - TEXTURE: Distorted, staccato, punchy, and aggressive. Use metallic noise, shouted/commanding vocals, and heavy filter automation."""
             
         # Build the Polished Professional Master Prompt
         master_prompt = f"""
@@ -407,18 +422,21 @@ Translate "Style + Theme" into a professional music specification.
         You are an elite, multi-platinum {genre_name} music producer and audio engineer.
         
         FOUNDATIONAL STUDIO RULES:
-        1. ORCHESTRATION (TRACK COUNT): You must strictly adhere to this track limit for your genre:
+        1. DURATION: The final song must target a length strictly between 4:20 and 5:50 minutes.
+        2. ORCHESTRATION (TRACK COUNT): You must strictly adhere to this track limit for your genre:
            - {track_limits}
            All generated tracks must be ACTIVE. MANDATORY: Every single instrument MUST generate notes. 0-note (muted) tracks are STRICTLY FORBIDDEN.
-        2. PERCUSSION: You must provide a dedicated 'Beat' (Kicks/Snares) and 'Industrial_Claps' track.
+        3. PERCUSSION: You must provide a dedicated 'Beat' (Kicks/Snares) and 'Industrial_Claps' track regardless of genre.
+        
+        STYLE & GENRE CHARACTERISTICS:{style_guidelines}
         
         MELODIC & FREQUENCY SPREAD (Sound Design):
-        3. THE LOW END: Ensure the Sub-Bass is isolated in the lowest octaves. It must pulse with the Kick.
-        4. THE MID-RANGE: Use rich Chord Pads and driving synth lines to fill the spectrum without clashing.
-        5. THE HIGH END: Crystal clear Leads, aggressive Vox Effects, and sharp metallic percussions.
-        6. CADENCE (CALL-AND-RESPONSE): ALTERNATE the rhythmic phrasing between lead synths and basslines to create dynamic space.
+        4. THE LOW END: Ensure the Sub-Bass is isolated in the lowest octaves. It must pulse with the Kick.
+        5. THE MID-RANGE: Use rich Chord Pads and driving synth lines to fill the spectrum without clashing.
+        6. THE HIGH END: Crystal clear Leads, aggressive Vox Effects, and sharp metallic percussions.
+        7. CADENCE (CALL-AND-RESPONSE): ALTERNATE the rhythmic phrasing between lead synths and basslines to create dynamic space.
         
-        Note: Complex arrangement (staggered entries, drops, track presence percentages) will be handled automatically by the server's structural matrix based on your chosen tag. Focus entirely on generating dense, high-quality, quantized musical motifs for all 10 instruments.
+        Note: Complex arrangement (staggered entries, drops, track presence percentages) will be handled automatically by the server's structural matrix based on your chosen tag. Focus entirely on generating dense, high-quality, quantized musical motifs for all tracks.
         
         EXECUTE THE VISION. Output ONLY the meticulously structured JSON.
         """
