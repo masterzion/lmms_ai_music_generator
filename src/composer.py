@@ -401,7 +401,11 @@ Translate "Style + Theme" into a professional music specification.
         - <chillout> (Atmospheric, evolving, downtempo ambient soundscapes)
         
         FOUNDATIONAL STUDIO RULES:
-        1. ORCHESTRATION: Minimum 10 distinct instruments. All must be ACTIVE (No silent tracks). MANDATORY: Every single instrument MUST generate notes. 0-note (muted) tracks are STRICTLY FORBIDDEN.
+        1. ORCHESTRATION (TRACK COUNT): You must strictly adhere to these track limits based on your chosen genre tag:
+           - <ebm>: 8 to 14 tracks (focused, driving, and powerful).
+           - <future pop>: 12 to 24 tracks (dense, highly layered, commercial pop production).
+           - <chillout>: 6 to 12 tracks (minimalist, spacious, and atmospheric).
+           All generated tracks must be ACTIVE. MANDATORY: Every single instrument MUST generate notes. 0-note (muted) tracks are STRICTLY FORBIDDEN.
         2. PERCUSSION: You must provide a dedicated 'Beat' (Kicks/Snares) and 'Industrial_Claps' track.
         
         MELODIC & FREQUENCY SPREAD (Sound Design):
