@@ -80,13 +80,19 @@ echo "--- Setup Complete ---"
 echo "To start the server on Steam Deck, run:"
 echo "export HSA_OVERRIDE_GFX_VERSION=10.3.0 && source venv/bin/activate && python server.py"
 
-# 7. --- AUDIO RENDERING ENGINE (OPTIONAL) ---
-echo "--- Checking for Audio Rendering Engine (FluidSynth) ---"
-if command -v fluidsynth >/dev/null 2>&1; then
-    echo "FluidSynth is already installed in the system."
+# 7. --- AUDIO RENDERING ENGINE (CONTAINERIZED) ---
+echo "--- Setting up Audio Rendering Engine (Podman/FluidSynth) ---"
+if command -v podman >/dev/null 2>&1; then
+    echo "Podman detected. Building ACE-Step Renderer image..."
+    if [ -f "Dockerfile.renderer" ]; then
+        podman build -t ace-step-renderer -f Dockerfile.renderer .
+        echo "Renderer image built successfully."
+    else
+        echo "Error: Dockerfile.renderer not found. Skipping image build."
+    fi
 else
-    echo "Notice: FluidSynth not found. WAV rendering will be disabled."
-    echo "To enable it without root, you would need a user-space installation or flatpak."
+    echo "Notice: Podman not found. Containerized rendering will be unavailable."
+    echo "To enable WAV rendering on Steam Deck, install Podman via Discover/Flatpak or system packages."
 fi
 
 echo "Checking for High-Fidelity SoundFont (FluidR3_GM)..."

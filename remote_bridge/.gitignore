@@ -3,6 +3,8 @@ venv/
 *.whl
 *.pt
 *.mid
+*.wav
+*.mp3
 server.log
 __pycache__/
 .DS_Store

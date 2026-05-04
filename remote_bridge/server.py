@@ -5,7 +5,7 @@ from typing import List, Dict, Optional
 import uvicorn
 import os
 import mido
-from mido import Message, MidiFile, MidiTrack
+from mido import Message, MidiFile, MidiTrack, MetaMessage
 
 # STEAM DECK OPTIMIZATION: Force ROCm for APU and limit memory
 os.environ["HSA_OVERRIDE_GFX_VERSION"] = "10.3.0" # Required for Steam Deck APU
@@ -309,15 +309,17 @@ async def generate_full_composition(request: FullCompositionRequest):
     }
 @app.post("/render_wav")
 async def render_wav(request: Request):
-    """Renders the last generated MIDI into a high-quality WAV."""
+    """Renders the last generated MIDI into a high-quality WAV using Podman."""
     import shutil
-    if not shutil.which("fluidsynth"):
+    
+    # Check for Podman instead of FluidSynth
+    if not shutil.which("podman"):
         raise HTTPException(
             status_code=501, 
-            detail="FluidSynth not found. WAV rendering is not available on this server without system-level installation."
+            detail="Podman not found. Containerized rendering is not available."
         )
 
-    print("ACE-Step: Rendering MIDI to WAV (Hi-Fi mode)...")
+    print("ACE-Step: Rendering MIDI to WAV (Containerized Hi-Fi mode)...")
     midi_file = "ace_step_output.mid"
     wav_file = "ace_step_output.wav"
     sf2_path = "soundfonts/FluidR3_GM.sf2"
@@ -325,13 +327,30 @@ async def render_wav(request: Request):
     if not os.path.exists(midi_file):
         raise HTTPException(status_code=404, detail="No MIDI file found to render.")
     
-    # Run FluidSynth in background to render WAV
+    # Run FluidSynth via Podman
     import subprocess
     try:
-        # fluidsynth -ni [sf2] [midi] -F [output]
-        cmd = ["fluidsynth", "-ni", sf2_path, midi_file, "-F", wav_file, "-r", "44100"]
+        # Get absolute path for mounting
+        cwd = os.getcwd()
+        
+        # podman run --rm -v $PWD:/app ace-step-renderer -ni -F [output] -r 44100 [sf2] [midi]
+        cmd = [
+            "podman", "run", "--rm", 
+            "-v", f"{cwd}:/app", 
+            "ace-step-renderer", 
+            "-ni", "-F", wav_file, "-r", "44100",
+            sf2_path, midi_file
+        ]
+        
+        # Clean up existing WAV if it exists to avoid prompts
+        if os.path.exists(wav_file):
+            os.remove(wav_file)
+            
         subprocess.run(cmd, check=True)
         
+        if not os.path.exists(wav_file):
+            raise Exception("FluidSynth failed to produce a WAV file.")
+
         return FileResponse(
             path=wav_file,
             filename="production.wav",
@@ -344,4 +363,3 @@ async def render_wav(request: Request):
 if __name__ == "__main__":
     load_model()
     uvicorn.run(app, host="0.0.0.0", port=8000)
-rt=8000)
