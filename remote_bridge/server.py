@@ -254,10 +254,23 @@ Task: Design the musical theory foundation for: {request.prompt}
                     print(" [Done]")
                     break
         
+        # --- DEBUG LOGGING & VALIDATION ---
+        os.makedirs("temp", exist_ok=True)
+        with open("temp/last_theory_response.txt", "w") as f:
+            f.write(raw_output)
+            
         json_match = re.search(r'\{.*\}', raw_output, re.DOTALL)
-        if json_match:
+        if not json_match:
+            print("ACE-Step: ERROR - Pure JSON not found in raw output. check temp/last_theory_response.txt")
+            raise HTTPException(status_code=500, detail="Invalid Theory Format: No JSON block found.")
+            
+        try:
             data = json.loads(json_match.group(0))
-            # Support both flat and nested meta
+        except Exception as e:
+            print(f"ACE-Step: JSON Parsing Error: {e}")
+            raise HTTPException(status_code=500, detail=f"JSON Parsing Error: {e}")
+            
+        # Support both flat and nested meta
             bpm = data.get("bpm") or data.get("meta", {}).get("bpm", 120)
             scale = data.get("scale") or data.get("meta", {}).get("scale", "minor")
             intervals = data.get("intervals") or data.get("meta", {}).get("intervals", [0, 2, 3, 5, 7, 8, 10])
@@ -344,13 +357,22 @@ User request: {request.prompt}
                     print(" [Done]")
                     break
         
+        # --- DEBUG LOGGING & VALIDATION ---
+        os.makedirs("temp", exist_ok=True)
+        with open("temp/last_composition_response.txt", "w") as f:
+            f.write(raw_output)
+            
         # Regex to strip out <think> and grab JSON
         json_match = re.search(r'\{.*\}', raw_output, re.DOTALL)
         if not json_match:
-            print("ACE-Step ERROR: Failed to extract JSON from Ollama's response.")
-            raise Exception("LLM did not return a valid JSON payload after thinking.")
+            print("ACE-Step: ERROR - Pure JSON not found in raw output. check temp/last_composition_response.txt")
+            raise HTTPException(status_code=500, detail="Invalid Composition Format: No JSON block found.")
             
-        llm_composition = json.loads(json_match.group(0))
+        try:
+            llm_composition = json.loads(json_match.group(0))
+        except Exception as e:
+            print(f"ACE-Step: JSON Parsing Error: {e}")
+            raise HTTPException(status_code=500, detail=f"JSON Parsing Error: {e}")
         llm_meta = llm_composition.get("meta", {})
         llm_tracks = llm_composition.get("tracks", {})
         
