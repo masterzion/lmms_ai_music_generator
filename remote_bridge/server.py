@@ -473,16 +473,51 @@ async def generate_full_composition(request: FullCompositionRequest):
     
     # Save the MASTER MIDI for rendering (Full 4-minute sequence)
     mid = MidiFile()
+    
+    # SGM-V2.01 Instrument Mapping
+    instrument_map = {
+        "drum_kit": 25, "industrial_claps": 25, "noise_perc": 25, # TR-808 Kit (Ch 10)
+        "sub_bass": 39, "acid_line": 38, "fm_bass": 38, "deep_sub": 32, "sub_growl": 87,
+        "distorted_lead": 81, "pop_pluck": 80, "main_lead": 81, "arp_synth": 80, "soft_pluck": 108,
+        "dark_pad": 93, "wide_pad": 89, "atmosphere_pad": 88,
+        "vocal_shout": 54, "vocal_chops": 53, "chorus_harmony": 52, "ethereal_vox": 91,
+        "riser": 103, "noise_sweep": 96, "impact": 119, "foley_texture": 97,
+        "guitar_strum": 27, "electric_piano": 4
+    }
+    
+    channel_allocator = 0
     for name, t_data in tracks.items():
+        name_l = name.lower()
+        is_drum = "drum" in name_l or "clap" in name_l or "perc" in name_l
+        
+        if is_drum:
+            ch = 9 # MIDI Channel 10 is reserved for Percussion (0-indexed = 9)
+        else:
+            ch = channel_allocator
+            if ch == 9:
+                channel_allocator += 1
+                ch = channel_allocator
+            channel_allocator += 1
+            if channel_allocator > 15:
+                channel_allocator = 0 # Loop if we exceed 16 channels
+                
+        prog = instrument_map.get(name_l, 0)
+        
         track = MidiTrack()
         mid.tracks.append(track)
         track.append(MetaMessage('track_name', name=name, time=0))
+        track.append(Message('program_change', program=prog, channel=ch, time=0))
+        
         for note in t_data["_full_pattern"]:
             if note != -1:
-                track.append(Message('note_on', note=note, velocity=90, time=0))
-                track.append(Message('note_off', note=note, velocity=0, time=120))
+                # EBM/Drum specific note logic adjustments
+                render_note = note
+                if is_drum and name_l == "industrial_claps":
+                    render_note = 39 # Standard clap
+                track.append(Message('note_on', note=render_note, velocity=90, time=0, channel=ch))
+                track.append(Message('note_off', note=render_note, velocity=0, time=120, channel=ch))
             else:
-                track.append(Message('note_off', note=0, velocity=0, time=120))
+                track.append(Message('note_off', note=0, velocity=0, time=120, channel=ch))
                 
     mid.save("ace_step_output.mid")
     

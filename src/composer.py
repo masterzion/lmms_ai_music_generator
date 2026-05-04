@@ -387,29 +387,61 @@ You MUST strictly follow the dynamic rules provided in the Master Prompt regardi
         req_lower = user_request.lower()
         if "<future pop>" in req_lower:
             genre_name = "Future Pop"
-            track_limits = "12 to 24 tracks (dense, highly layered, commercial pop production)."
+            track_limits = "Exactly 14 tracks. Use the explicit names below."
             style_guidelines = """
         - RHYTHM & TIME: 4/4 time signature is standard, but you may occasionally use heavy syncopation or a swinging groove.
         - SUB-BASS & LOW END: Use a bouncy, sidechained sub-bass. The bassline should follow the chord progression, often using 8th-note or off-beat pumping patterns.
         - MOOD & AGGRESSION: High-energy, melodic, and emotionally uplifting or slightly melancholic. Not overly aggressive. Focus on catchy vocal chops and lush, wide synths.
-        - TEXTURE: Clean, polished, and commercial-ready."""
+        - MANDATORY EXACT TRACK NAMES AND GOALS:
+          1. "Drum_Kit": Punchy, commercial EDM beat (Kick/Snare/Hats).
+          2. "Industrial_Claps": High-energy claps hitting on the 2 and 4.
+          3. "Sub_Bass": Bouncy, pumping 8th-note bassline.
+          4. "Pop_Pluck": Catchy, melodic staccato hook.
+          5. "Vocal_Chops": High-pitched, chopped vocal melodies.
+          6. "Main_Lead": The massive euphoric chorus melody.
+          7. "Wide_Pad": Lush, wide chord progressions.
+          8. "Guitar_Strum": Rhythmic pop strumming.
+          9. "Arp_Synth": Fast, sparkling 16th-note arpeggios.
+          10. "Riser": Energy buildups.
+          11. "Impact": Massive hits on section changes.
+          12. "Sub_Growl": Heavy bass fills.
+          13. "Noise_Sweep": White noise transitions.
+          14. "Chorus_Harmony": Epic vocal backing."""
         elif "<chillout>" in req_lower:
             genre_name = "Chillout/Ambient"
-            track_limits = "6 to 12 tracks (minimalist, spacious, and atmospheric)."
+            track_limits = "Exactly 8 tracks. Use the explicit names below."
             style_guidelines = """
         - RHYTHM & TIME: Usually 4/4, but feel free to experiment with slower 3/4 or 6/8 polyrhythms for a drifting, weightless sensation.
         - SUB-BASS & LOW END: Deep, sustained, and evolving sub-bass. The bass should move slowly (whole notes or half notes) to create a warm, grounding foundation.
         - MOOD & AGGRESSION: Zero aggression. The mood must be serene, hypnotic, introspective, and peaceful.
-        - TEXTURE: Extremely spacious. Heavy use of reverb, delay, foley textures (rain, vinyl crackle), and evolving cinematic pads."""
+        - MANDATORY EXACT TRACK NAMES AND GOALS:
+          1. "Drum_Kit": Soft, acoustic/downtempo breakbeats.
+          2. "Industrial_Claps": Very sparse, soft snare/claps.
+          3. "Deep_Sub": Warm, organic, slow-moving bass notes.
+          4. "Atmosphere_Pad": Evolving, massive ambient chords.
+          5. "Foley_Texture": Background organic noise/vinyl crackle.
+          6. "Electric_Piano": Jazz-hop, melancholic chord stabs.
+          7. "Soft_Pluck": Gentle, floating polyrhythmic melodies.
+          8. "Ethereal_Vox": Distant, reverbed angelic voices."""
         else:
             # Default fallback if no tag or <ebm>
             genre_name = "Electronic Body Music (EBM)"
-            track_limits = "8 to 14 tracks (focused, driving, and powerful)."
+            track_limits = "Exactly 10 tracks. Use the explicit names below."
             style_guidelines = """
         - RHYTHM & TIME: Strictly a relentless 4/4 "four-on-the-floor" time signature to drive the dancefloor.
         - SUB-BASS & LOW END: FORCED 16th-note driving sub-bass and sequenced acid basslines. The bass must be highly repetitive, oscillating, and mechanically precise.
         - MOOD & AGGRESSION: Hard, intense, dark, and transgressive. It must feel like a cold, military-industrial factory. 
-        - TEXTURE: Distorted, staccato, punchy, and aggressive. Use metallic noise, shouted/commanding vocals, and heavy filter automation."""
+        - MANDATORY EXACT TRACK NAMES AND GOALS:
+          1. "Drum_Kit": Relentless 4/4 Kick and Snare.
+          2. "Industrial_Claps": Aggressive claps hitting on 2 and 4.
+          3. "Sub_Bass": Forced 16th-note driving low-end pulse.
+          4. "Acid_Line": Distorted, oscillating 16th-note sequence.
+          5. "Distorted_Lead": Piercing, cold melodic hook.
+          6. "Noise_Perc": Metallic, industrial percussion hits.
+          7. "Dark_Pad": Dissonant, cold background atmosphere.
+          8. "Vocal_Shout": Staccato commanding vocal chants.
+          9. "Riser": Tension building sweeps.
+          10. "FM_Bass": Plucky counter-bass rhythm."""
             
         # Build the Polished Professional Master Prompt
         master_prompt = f"""
@@ -434,16 +466,9 @@ You MUST strictly follow the dynamic rules provided in the Master Prompt regardi
         
         Note: Complex arrangement (staggered entries, drops, track presence percentages) will be handled automatically by the server's structural matrix based on your chosen tag. Focus entirely on generating dense, high-quality, quantized musical motifs for all tracks.
         
-        MANDATORY REASONING PHASE (<think> Block):
-        Before you generate ANY JSON, you MUST use a <think> block to deeply analyze the request.
-        To achieve maximum depth, your <think> block must systematically outline:
-        1. HARMONIC MATH: Decide the root note and exact MIDI intervals for the scale to perfectly match the genre's mood.
-        2. RHYTHMIC CADENCE: Plan the precise 16-step sequencer interactions between the Beat and Sub-Bass to guarantee groove without frequency clashing.
-        3. INSTRUMENTATION: List every instrument you intend to create and verify it strictly falls within the {track_limits} limit.
-        4. ANTI-SILENCE AUDIT: Explicitly state your mathematical strategy for ensuring absolutely zero tracks are generated as silent/muted.
-        Only after completing this rigorous deep analysis may you close the </think> block and output the final JSON.
-        
-        EXECUTE THE VISION. Output ONLY the meticulously structured JSON.
+        EXECUTE THE VISION. 
+        MANDATORY REQUIREMENT: You MUST start your response with a highly detailed <think> block. Inside this block, step-by-step calculate the exact MIDI note numbers, syncopation patterns, and rhythmic cadences you will use for all tracks to achieve the requested genre.
+        Only after closing the </think> tag, output the meticulously structured JSON.
         """
         
         try:
