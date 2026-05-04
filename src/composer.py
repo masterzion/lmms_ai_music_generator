@@ -387,32 +387,30 @@ Translate "Style + Theme" into a professional music specification.
         print(f"--- MONOLITHIC MODE: Delegating entire song to ACE-Step ---")
         bridge_url = "http://192.168.2.188:8000/generate_full_composition"
         
-        # Build the Ultimate Professional Master Prompt
+        # Build the Polished Professional Master Prompt
         master_prompt = f"""
         PRODUCE A HIGH-FIDELITY, PROFESSIONAL-GRADE MASTER COMPOSITION FOR: "{user_request}"
         
-        You are an elite, multi-platinum EDM/Industrial music producer and audio engineer. 
-        Your goal is to orchestrate a pristine, club-ready, dynamic track that rivals top-tier professional releases.
+        You are an elite, multi-platinum music producer and audio engineer.
+        
+        GENRE ROUTING SYSTEM (MANDATORY):
+        The user request MUST be interpreted under one of the following exact genre tags. 
+        Ensure your musical choices (scales, rhythms, motifs) align with the requested tag:
+        - <ebm> (Aggressive, relentless, 4-on-the-floor industrial dance)
+        - <future pop> (High-energy, melodic, structured verse/chorus club pop)
+        - <chillout> (Atmospheric, evolving, downtempo ambient soundscapes)
         
         FOUNDATIONAL STUDIO RULES:
-        1. DURATION: Minimum 4 minutes of evolving, hypnotic arrangement.
-        2. ORCHESTRATION: Minimum 10 distinct instruments. All must be ACTIVE (No silent tracks). MANDATORY: Every single instrument MUST generate notes. 0-note tracks are STRICTLY FORBIDDEN.
+        1. ORCHESTRATION: Minimum 10 distinct instruments. All must be ACTIVE (No silent tracks). MANDATORY: Every single instrument MUST generate notes. 0-note (muted) tracks are STRICTLY FORBIDDEN.
+        2. PERCUSSION: You must provide a dedicated 'Beat' (Kicks/Snares) and 'Industrial_Claps' track.
         
-        RHYTHM & GROOVE MECHANICS:
-        3. PERCUSSION: MANDATORY dedicated 'Beat' (Kicks/Snares) and 'Industrial_Claps' tracks.
-        4. FOUNDATION: FORCE a relentlessly driving, quantized beat foundation. The groove must lock the listener in.
-        5. SYNCOPATION: Implement off-beat hi-hats and syncopated percussion hits to create complex rhythmic pockets.
+        MELODIC & FREQUENCY SPREAD (Sound Design):
+        3. THE LOW END: Ensure the Sub-Bass is isolated in the lowest octaves. It must pulse with the Kick.
+        4. THE MID-RANGE: Use rich Chord Pads and driving synth lines to fill the spectrum without clashing.
+        5. THE HIGH END: Crystal clear Leads, aggressive Vox Effects, and sharp metallic percussions.
+        6. CADENCE (CALL-AND-RESPONSE): ALTERNATE the rhythmic phrasing between lead synths and basslines to create dynamic space.
         
-        ARRANGEMENT & DYNAMICS:
-        6. TRACK PRESENCE (MANDATORY): You must feature at least 3 core baseline instruments. The Sub-Bass, Beat, and Industrial_Claps tracks MUST be active for at least 90% of the song. All other secondary instruments MUST be active for at least 40% of the song.
-        7. TENSION & RELEASE: Masterful use of energy. Build massive tension using Risers and fast arpeggios. Release the tension into devastating, high-energy drops where the Sub-Bass and Kick hit with maximum impact.
-        8. STAGGERED ENTRIES: Do not start all instruments at once. Introduce elements sequentially (Intro -> Build -> Drop -> Breakdown -> Climax -> Outro).
-        9. CADENCE (CALL-AND-RESPONSE): ALTERNATE the rhythmic phrasing between lead synths and basslines (create dynamic space, avoid mud).
-        
-        FREQUENCY SPREAD & SOUND DESIGN:
-        9. THE LOW END: Ensure the Sub-Bass is strictly isolated in the lowest octaves. It must pulse with the Kick.
-        10. THE MID-RANGE: Use rich, wide Chord Pads and driving Acid Lines to fill the spectrum without clashing.
-        11. THE HIGH END: Crystal clear Leads, aggressive Vox Effects, and sharp metallic percussions piercing the top frequencies.
+        Note: Complex arrangement (staggered entries, drops, track presence percentages) will be handled automatically by the server's structural matrix based on your chosen tag. Focus entirely on generating dense, high-quality, quantized musical motifs for all 10 instruments.
         
         EXECUTE THE VISION. Output ONLY the meticulously structured JSON.
         """
