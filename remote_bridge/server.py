@@ -6,6 +6,8 @@ import uvicorn
 import os
 import random
 import requests
+import re
+import json
 import mido
 from mido import Message, MidiFile, MidiTrack, MetaMessage
 
@@ -248,19 +250,49 @@ async def generate_full_composition(request: FullCompositionRequest):
     # (In a full LLM deploy, you'd call model.generate(..., stop_at_reasoning=True))
     thought_prompt = f"{request.system_prompt}\n\n<think>\nUser wants: {request.prompt}\n"
     
-    # We 'Reason' about the Industrial requirements:
+    # We 'Reason' about the Industrial requirements (for server tracking)
     prompt_lower = request.prompt.lower()
     is_chill = "<chillout>" in prompt_lower
     is_fast = "<ebm>" in prompt_lower or "<future pop>" in prompt_lower
     
     bpm = random.randint(80, 100) if is_chill else (random.randint(128, 145) if is_fast else 120)
-    scales = {"minor": [0, 2, 3, 5, 7, 8, 10], "phrygian": [0, 1, 3, 5, 7, 8, 10], "dorian": [0, 2, 3, 5, 7, 9, 10]}
-    scale_name = random.choice(list(scales.keys()))
-    intervals = scales[scale_name]
-    root_midi = random.choice([36, 48, 60])
+    print(f"ACE-Step: Server matrix overriding BPM logic: {bpm}")
     
-    print(f"ACE-Step: reasoning complete. BPM: {bpm}, Scale: {scale_name}")
-    print(f"ACE-Step: PHASE 2 (MIDI Generation) with forced generation_phase='midi'...")
+    print(f"ACE-Step: DEEP THINKING ACTIVATED. Calling Ollama for raw motif generation...")
+    try:
+        # Call Ollama synchronous to extract true CoT
+        ollama_response = requests.post(
+            "http://127.0.0.1:11434/api/generate",
+            json={
+                "model": "llama3:8b",
+                "prompt": request.prompt,
+                "system": request.system_prompt,
+                "stream": False,
+                "options": {
+                    "temperature": 0.8,
+                    "num_ctx": 4096
+                }
+            },
+            timeout=14400
+        )
+        ollama_data = ollama_response.json()
+        raw_output = ollama_data.get("response", "")
+        
+        # Regex to strip out <think> and grab JSON
+        json_match = re.search(r'\{.*\}', raw_output, re.DOTALL)
+        if not json_match:
+            print("ACE-Step ERROR: Failed to extract JSON from Ollama's response.")
+            raise Exception("LLM did not return a valid JSON payload after thinking.")
+            
+        llm_composition = json.loads(json_match.group(0))
+        llm_tracks = llm_composition.get("tracks", {})
+        
+        print("ACE-Step: Deep Thinking Complete. Motifs extracted successfully.")
+    except Exception as e:
+        print(f"ACE-Step: Deep Thinking failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    print(f"ACE-Step: PHASE 2 (Server Arrangement Matrix Calculation)...")
     
     prompt_lower = request.prompt.lower()
     is_future_pop = "<future pop>" in prompt_lower
@@ -330,31 +362,44 @@ async def generate_full_composition(request: FullCompositionRequest):
         is_clap = "clap" in name_l
         is_drum = any(k in name_l for k in ["drum", "kick", "perc", "808", "beat"])
         is_bass = any(k in name_l for k in ["bass", "acid", "sub"])
-        motif_len = 4 if (is_drum or is_clap) else 8
+        # Attempt to pull deep-thinking motifs from the LLM
+        llm_track_data = llm_tracks.get(name, {})
+        llm_patterns = llm_track_data.get("patterns", {})
         
-        # CADENCE LOGIC
-        offset = 0 if (is_drum or is_bass or is_clap) else (i % 4) * 2
+        llm_motif = None
+        if llm_patterns and isinstance(llm_patterns, dict):
+            # Extract the first available sequence
+            for pat_val in llm_patterns.values():
+                if isinstance(pat_val, list) and len(pat_val) > 0:
+                    llm_motif = pat_val
+                    break
         
-        # Create the Hook/Groove
-        motif = []
-        for _ in range(motif_len):
-            # FORCE DENSITY: Drums and Bass are the EBM backbone (0.8-0.9 density)
-            prob = 0.9 if (is_drum or is_bass or is_clap) else 0.4
-            if random.random() < prob:
-                if is_clap:
-                    motif.append(39) # Standard MIDI Hand Clap
-                elif is_drum:
-                    # Extended Industrial Mapping: Kick(36), Snare(38), OpenHat(42)
-                    motif.append(random.choice([36, 38, 40, 42])) 
-                elif is_bass:
-                    # Force Bass to lowest octave for EBM "Chug" + Safety Clamp
-                    val = root_midi - 12 + random.choice(intervals[:3])
-                    motif.append(max(0, min(127, val)))
+        if llm_motif:
+            motif = llm_motif
+            motif_len = len(motif)
+            offset = 0 # Assume the LLM intended it exactly this way
+        else:
+            # Fallback to Mathematical Generative if LLM hallucinates or misses a track
+            motif_len = 4 if (is_drum or is_clap) else 8
+            # CADENCE LOGIC
+            offset = 0 if (is_drum or is_bass or is_clap) else (i % 4) * 2
+            
+            motif = []
+            for _ in range(motif_len):
+                prob = 0.9 if (is_drum or is_bass or is_clap) else 0.4
+                if random.random() < prob:
+                    if is_clap:
+                        motif.append(39)
+                    elif is_drum:
+                        motif.append(random.choice([36, 38, 40, 42])) 
+                    elif is_bass:
+                        val = root_midi - 12 + random.choice(intervals[:3])
+                        motif.append(max(0, min(127, val)))
+                    else:
+                        val = root_midi + random.choice(intervals)
+                        motif.append(max(0, min(127, val)))
                 else:
-                    val = root_midi + random.choice(intervals)
-                    motif.append(max(0, min(127, val)))
-            else:
-                motif.append(-1)
+                    motif.append(-1)
                 
         # SAFETY SHIELD: Guarantee No Silent Tracks
         # If the probability calculation gave us 0 notes, we FORCE at least one note.
