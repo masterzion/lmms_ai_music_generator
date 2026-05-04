@@ -241,31 +241,38 @@ class FullCompositionRequest(BaseModel):
 @app.post("/generate_full_composition")
 async def generate_full_composition(request: FullCompositionRequest):
     """Monolithic Producer: Generates the entire song in one pass using ACE-Step 'Thinking' protocol."""
-    # 1. PHASE 1: GENERATE THEORY (The 'Think' Phase)
-    # We force the model to reason inside <think> and stop there.
-    # In this bridge demo, we simulate the LLM's 'Thinking' extraction 
-    # to ensure the structure follows the logic we found online.
-    
-    # Simulate extraction from model's CoT output
-    # (In a full LLM deploy, you'd call model.generate(..., stop_at_reasoning=True))
-    thought_prompt = f"{request.system_prompt}\n\n<think>\nUser wants: {request.prompt}\n"
-    
-    # We 'Reason' about the Industrial requirements (for server tracking)
+    # Determine recommendations based on style tags
     prompt_lower = request.prompt.lower()
     is_chill = "<chillout>" in prompt_lower
-    is_fast = "<ebm>" in prompt_lower or "<future pop>" in prompt_lower
+    is_future = "<future pop>" in prompt_lower
+    is_ebm = "<ebm>" in prompt_lower
     
-    bpm = random.randint(80, 100) if is_chill else (random.randint(128, 145) if is_fast else 120)
-    print(f"ACE-Step: Server matrix overriding BPM logic: {bpm}")
+    recom_bpm = "80-100" if is_chill else ("128-140" if is_future else ("135-155" if is_ebm else "120"))
+    recom_scale = "Dorian or Phrygian" if (is_ebm or is_future) else "Minor or Major"
     
-    print(f"ACE-Step: DEEP THINKING ACTIVATED. Calling Ollama for raw motif generation...")
+    # 1. PHASE 1: GENERATE THEORY (The 'Think' Phase)
+    # We force the model to reason inside <think> and provide recommendations.
+    thought_prompt = f"""{request.system_prompt}
+    
+<think>
+Server Recommendations for {prompt_lower}:
+- BPM: {recom_bpm}
+- Scale: {recom_scale}
+- Root MIDI: 36 (C1) or 48 (C2)
+You have final authority. Decide the best BPM, Scale, and MIDI Motifs now.
+</think>
+
+User request: {request.prompt}
+"""
+    
+    print(f"ACE-Step: DEEP THINKING ACTIVATED. Calling Ollama with Theory Recommendations...")
     try:
         # Call Ollama synchronous to extract true CoT
         ollama_response = requests.post(
             "http://127.0.0.1:11434/api/generate",
             json={
                 "model": "llama3:8b",
-                "prompt": request.prompt,
+                "prompt": thought_prompt,
                 "system": request.system_prompt,
                 "stream": False,
                 "options": {
@@ -285,9 +292,16 @@ async def generate_full_composition(request: FullCompositionRequest):
             raise Exception("LLM did not return a valid JSON payload after thinking.")
             
         llm_composition = json.loads(json_match.group(0))
+        llm_meta = llm_composition.get("meta", {})
         llm_tracks = llm_composition.get("tracks", {})
         
-        print("ACE-Step: Deep Thinking Complete. Motifs extracted successfully.")
+        # EXTRACT THEORY FROM LLM
+        bpm = llm_meta.get("bpm", 120)
+        scale_name = llm_meta.get("scale", "minor")
+        intervals = llm_meta.get("intervals", [0, 2, 3, 5, 7, 8, 10])
+        root_midi = llm_meta.get("root_midi", 48)
+        
+        print(f"ACE-Step: Deep Thinking Complete. LLM Decided -> BPM: {bpm}, Scale: {scale_name}, Root: {root_midi}")
     except Exception as e:
         print(f"ACE-Step: Deep Thinking failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
