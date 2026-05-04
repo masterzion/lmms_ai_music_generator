@@ -2,3 +2,6 @@ fastapi
 uvicorn
 numpy
 pydantic
+mido
+requests
+safetensors
