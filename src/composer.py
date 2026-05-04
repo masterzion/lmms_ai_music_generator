@@ -434,6 +434,15 @@ You MUST strictly follow the dynamic rules provided in the Master Prompt regardi
         
         Note: Complex arrangement (staggered entries, drops, track presence percentages) will be handled automatically by the server's structural matrix based on your chosen tag. Focus entirely on generating dense, high-quality, quantized musical motifs for all tracks.
         
+        MANDATORY REASONING PHASE (<think> Block):
+        Before you generate ANY JSON, you MUST use a <think> block to deeply analyze the request.
+        To achieve maximum depth, your <think> block must systematically outline:
+        1. HARMONIC MATH: Decide the root note and exact MIDI intervals for the scale to perfectly match the genre's mood.
+        2. RHYTHMIC CADENCE: Plan the precise 16-step sequencer interactions between the Beat and Sub-Bass to guarantee groove without frequency clashing.
+        3. INSTRUMENTATION: List every instrument you intend to create and verify it strictly falls within the {track_limits} limit.
+        4. ANTI-SILENCE AUDIT: Explicitly state your mathematical strategy for ensuring absolutely zero tracks are generated as silent/muted.
+        Only after completing this rigorous deep analysis may you close the </think> block and output the final JSON.
+        
         EXECUTE THE VISION. Output ONLY the meticulously structured JSON.
         """
         
