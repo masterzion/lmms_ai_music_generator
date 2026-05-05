@@ -425,14 +425,14 @@ Ensure the BPM, Scale, and Note Patterns are mathematically consistent with the 
         - SUB-BASS & LOW END: FORCED 16th-note driving sub-bass and sequenced acid basslines. The bass must be highly repetitive, oscillating, and mechanically precise.
         - MOOD & AGGRESSION: Hard, intense, dark, and transgressive. It must feel like a cold, military-industrial factory. 
         - ORCHESTRATION RULES: You MUST include ALL Obligatory Instruments. You MAY include any Optional Instruments to hit your track limit. 
-          IMPORTANT: Each percussion track MUST use exactly ONE MIDI note. 
-          SIGNATURE PERCUSSION TABLE (USE THESE EXACT NOTES):
-          - <ebm>: Drum_Beat = 36 (Industrial Kick) | Industrial_Claps = 39 (Standard Clap)
-          - <future pop>: Drum_Beat = 36 (Punchy Kick) | Industrial_Claps = 40 (Electric Pop Snare)
-          - <chillout>: Drum_Beat = 36 (Sub Kick) | Industrial_Claps = 37 (Rimshot/Side Stick)
+          MANDATORY: Each percussion track MUST use exactly ONE MIDI note selected from the Top 5 Genre Table below:
+          TOP 5 GENRE PERCUSSION TABLE:
+          - <ebm>: Kick (Select 1: 36, 35, 27, 28, 24) | Clap (Select 1: 39, 40, 38, 41, 43)
+          - <future pop>: Kick (Select 1: 36, 35, 34, 27, 41) | Clap (Select 1: 39, 40, 42, 46, 38)
+          - <chillout>: Kick (Select 1: 36, 35, 41, 43, 33) | Clap (Select 1: 37, 39, 38, 31, 40)
         - OBLIGATORY INSTRUMENTS:
-          1. "Drum_Beat": Relentless 4/4 rhythm using the Signature Kick.
-          2. "Industrial_Claps": High-energy claps or layers hitting on 2 and 4.
+          1. "Drum_Beat": Relentless 4/4 rhythm using your selected Top 5 Kick.
+          2. "Industrial_Claps": High-energy claps or layers using your selected Top 5 Clap hitting on 2 and 4.
           3. "Sub_Bass": Forced 16th-note driving low-end pulse.
           4. "Acid_Line": Distorted, oscillating 16th-note sequence.
           5. "Distorted_Lead": Piercing, cold melodic hook.
