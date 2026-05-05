@@ -425,16 +425,20 @@ Ensure the BPM, Scale, and Note Patterns are mathematically consistent with the 
         - SUB-BASS & LOW END: FORCED 16th-note driving sub-bass and sequenced acid basslines. The bass must be highly repetitive, oscillating, and mechanically precise.
         - MOOD & AGGRESSION: Hard, intense, dark, and transgressive. It must feel like a cold, military-industrial factory. 
         - ORCHESTRATION RULES: You MUST include ALL Obligatory Instruments. You MAY include any Optional Instruments to hit your track limit. 
-          IMPORTANT: Each percussion track MUST use exactly ONE MIDI note (e.g. Drum_Beat = Kick only, Claps = Clap only).
+          IMPORTANT: Each percussion track MUST use exactly ONE MIDI note. 
+          SIGNATURE PERCUSSION TABLE (USE THESE EXACT NOTES):
+          - <ebm>: Drum_Beat = 36 (Industrial Kick) | Industrial_Claps = 39 (Standard Clap)
+          - <future pop>: Drum_Beat = 36 (Punchy Kick) | Industrial_Claps = 40 (Electric Pop Snare)
+          - <chillout>: Drum_Beat = 36 (Sub Kick) | Industrial_Claps = 37 (Rimshot/Side Stick)
         - OBLIGATORY INSTRUMENTS:
-          1. "Drum_Beat": Relentless 4/4 KICK only (MIDI 36).
-          2. "Industrial_Claps": Aggressive claps hitting on 2 and 4 (MIDI 39).
+          1. "Drum_Beat": Relentless 4/4 rhythm using the Signature Kick.
+          2. "Industrial_Claps": High-energy claps or layers hitting on 2 and 4.
           3. "Sub_Bass": Forced 16th-note driving low-end pulse.
           4. "Acid_Line": Distorted, oscillating 16th-note sequence.
           5. "Distorted_Lead": Piercing, cold melodic hook.
           6. "Dark_Pad": Dissonant, cold background atmosphere.
         - OPTIONAL INSTRUMENTS:
-          "Noise_Perc" (Metallic percussion hits), "Vocal_Shout" (Staccato commanding chants), "Riser" (Tension building sweeps), "FM_Bass" (Plucky counter-bass rhythm)."""
+          "Noise_Perc" (Metallic hits: MIDI 42 or 46), "Vocal_Shout" (MIDI 54/53), "Riser" (MIDI 103), "FM_Bass" (MIDI 38)."""
             
         # Build the Polished Professional Master Prompt
         master_prompt = f"""
