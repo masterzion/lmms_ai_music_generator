@@ -494,9 +494,9 @@ User request: {request.prompt}
                 prob = 0.9 if (is_drum or is_bass or is_clap) else 0.4
                 if random.random() < prob:
                     if is_clap:
-                        motif.append(39)
+                        motif.append(39) # Force Clap Only
                     elif is_drum:
-                        motif.append(random.choice([36, 38, 40, 42])) 
+                        motif.append(36) # Force Kick Only
                     elif is_bass:
                         val = root_midi - 12 + random.choice(intervals[:3])
                         motif.append(max(0, min(127, val)))

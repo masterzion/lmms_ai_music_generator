@@ -424,10 +424,11 @@ Ensure the BPM, Scale, and Note Patterns are mathematically consistent with the 
         - RHYTHM & TIME: Strictly a relentless 4/4 "four-on-the-floor" time signature to drive the dancefloor.
         - SUB-BASS & LOW END: FORCED 16th-note driving sub-bass and sequenced acid basslines. The bass must be highly repetitive, oscillating, and mechanically precise.
         - MOOD & AGGRESSION: Hard, intense, dark, and transgressive. It must feel like a cold, military-industrial factory. 
-        - ORCHESTRATION RULES: You MUST include ALL Obligatory Instruments. You MAY include any Optional Instruments to hit your track limit.
+        - ORCHESTRATION RULES: You MUST include ALL Obligatory Instruments. You MAY include any Optional Instruments to hit your track limit. 
+          IMPORTANT: Each percussion track MUST use exactly ONE MIDI note (e.g. Drum_Beat = Kick only, Claps = Clap only).
         - OBLIGATORY INSTRUMENTS:
-          1. "Drum_Kit": Relentless 4/4 Kick and Snare.
-          2. "Industrial_Claps": Aggressive claps hitting on 2 and 4.
+          1. "Drum_Beat": Relentless 4/4 KICK only (MIDI 36).
+          2. "Industrial_Claps": Aggressive claps hitting on 2 and 4 (MIDI 39).
           3. "Sub_Bass": Forced 16th-note driving low-end pulse.
           4. "Acid_Line": Distorted, oscillating 16th-note sequence.
           5. "Distorted_Lead": Piercing, cold melodic hook.
