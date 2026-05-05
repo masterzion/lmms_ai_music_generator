@@ -604,12 +604,9 @@ User request: {request.prompt}
         
         for note in t_data["_full_pattern"]:
             if note != -1:
-                # EBM/Drum specific note logic adjustments
-                render_note = note
-                if is_drum and name_l == "industrial_claps":
-                    render_note = 39 # Standard clap
-                track.append(Message('note_on', note=render_note, velocity=90, time=0, channel=ch))
-                track.append(Message('note_off', note=render_note, velocity=0, time=120, channel=ch))
+                # Use the exact note selected by the LLM or Fallback
+                track.append(Message('note_on', note=note, velocity=90, time=0, channel=ch))
+                track.append(Message('note_off', note=note, velocity=0, time=120, channel=ch))
             else:
                 track.append(Message('note_off', note=0, velocity=0, time=120, channel=ch))
                 
