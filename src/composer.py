@@ -426,10 +426,16 @@ Ensure the BPM, Scale, and Note Patterns are mathematically consistent with the 
         - MOOD & AGGRESSION: Hard, intense, dark, and transgressive. It must feel like a cold, military-industrial factory. 
         - ORCHESTRATION RULES: You MUST include ALL Obligatory Instruments. You MAY include any Optional Instruments to hit your track limit. 
           MANDATORY: Each percussion track MUST use exactly ONE MIDI note selected from the Top 5 Genre Table below:
-          TOP 5 GENRE PERCUSSION TABLE:
-          - <ebm>: Kick (Select 1: 36, 35, 27, 28, 24) | Clap (Select 1: 39, 40, 38, 41, 43)
-          - <future pop>: Kick (Select 1: 36, 35, 34, 27, 41) | Clap (Select 1: 39, 40, 42, 46, 38)
-          - <chillout>: Kick (Select 1: 36, 35, 41, 43, 33) | Clap (Select 1: 37, 39, 38, 31, 40)
+          TOP 5 GENRE PERCUSSION PALETTE (SELECT ONE PER TRACK):
+          - <ebm>: 
+            KICKS: 36 (909 Power), 35 (Deep Sub), 27 (Cyber Laser), 28 (Metallic Slap), 24 (Aggressive Low)
+            CLAPS: 39 (Hard Clap), 40 (Electric Snare), 38 (Industrial Snare), 41 (Low Impact), 43 (High Impact)
+          - <future pop>: 
+            KICKS: 36 (Club Kick), 35 (Soft Pop), 34 (Acoustic), 27 (Electronic Pulse), 41 (Tom-style)
+            CLAPS: 39 (Hand Clap), 40 (Pop Snare), 42 (Sharp Snap), 46 (Huge Impact), 38 (Classic Snare)
+          - <chillout>: 
+            KICKS: 36 (Warm Sub), 35 (Natural Bass), 41 (Low Tom), 43 (Mid Tom), 33 (Soft Pulse)
+            CLAPS: 37 (Organic Rimshot), 39 (Soft Studio), 38 (Acoustic Snare), 31 (Sticks), 40 (Rimshot)
         - OBLIGATORY INSTRUMENTS:
           1. "Drum_Beat": Relentless 4/4 rhythm using your selected Top 5 Kick.
           2. "Industrial_Claps": High-energy claps or layers using your selected Top 5 Clap hitting on 2 and 4.
