@@ -2,31 +2,39 @@ from llm.midi_llm_client import generate_midi_clip
 
 def generate_melody(plan):
     """
-    Orchestrates the AI generation of melody clips using MIDI-LLM.
-    Returns a list of pretty_midi objects corresponding to each section.
+    Orchestrates the AI generation of melody clips using MIDI-LLM and forensic parameters.
     """
-    clips = []
-    
-    prompts = { p["section"]: p["prompt"] for p in plan.get("midi_prompts", []) }
+    # We now return a list of lists: [[tracks for section 1], [tracks for section 2], ...]
+    section_clips = []
     
     for i, section in enumerate(plan["sections"]):
         section_name = section["name"]
+        tracks_in_section = []
         
-        # Check if we have a prompt for this section
-        if section_name in prompts:
-            prompt = prompts[section_name]
-            print(f"  Section {i+1} ({section_name}): Prompting AI for '{prompt}'...", flush=True)
+        print(f"  Section {i+1} ({section_name}): Processing {len(section.get('tracks', []))} tracks...", flush=True)
+        
+        for track_plan in section.get("tracks", []):
+            if track_plan.get("is_drum"): continue # Handled by drum generator
             
-            # Call the real MIDI-LLM architecture
-            clip = generate_midi_clip(prompt)
+            prompt = track_plan["midi_prompt"]
+            # Forensic enhancement of the prompt
+            enhanced_prompt = (
+                f"{prompt}. Style: {track_plan.get('grid', '1/16 notes')}. "
+                f"Density: {track_plan.get('density', 0.5)}. "
+                f"Max Polyphony: {track_plan.get('polyphony', 1)}. "
+                f"Range: MIDI {track_plan.get('pitch_range', [36, 84])}."
+            )
+            
+            print(f"    - Generating '{track_plan['name']}'...", flush=True)
+            clip = generate_midi_clip(enhanced_prompt)
             if clip:
-                print(f"  Section {i+1}: AI clip received.", flush=True)
+                # Apply track name to the instrument in the clip
+                for inst in clip.instruments:
+                    inst.name = track_plan["name"]
+                tracks_in_section.append(clip)
             else:
-                print(f"  Section {i+1}: AI failed to return clip (API might be loading or offline).", flush=True)
+                tracks_in_section.append(None)
                 
-            clips.append(clip)
-        else:
-            print(f"  Section {i+1} ({section_name}): No specific AI prompt found, skipping.", flush=True)
-            clips.append(None)
+        section_clips.append(tracks_in_section)
             
-    return clips
+    return section_clips

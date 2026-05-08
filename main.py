@@ -21,7 +21,9 @@ def generate_song(user_prompt, output_dir="outputs", topic_override=None):
     topic = topic_override if topic_override else parsed_topic
     print(f"--- Processing: {genre} | {topic} ---", flush=True)
     
-    genre_config = config.GENRES.get(genre, config.GENRES["chillout"])
+    from core.style_config import STYLE_DATA
+    style_info = STYLE_DATA.get(genre, STYLE_DATA["chillout"])
+    genre_config = style_info["pipeline"]
     
     print("--- Step 1: Expanding prompt ---", flush=True)
     expanded = expand_prompt(genre, topic)
@@ -42,9 +44,12 @@ def generate_song(user_prompt, output_dir="outputs", topic_override=None):
     melody_clips = generate_melody(plan)
     
     print("--- Step 4: Cleaning up MIDI ---", flush=True)
-    cleaned_clips = [
-        cleanup_midi_clip(c, bpm, key) if c else None for c in melody_clips
-    ]
+    cleaned_clips = []
+    for section_track_list in melody_clips:
+        cleaned_section = [
+            cleanup_midi_clip(c, bpm, key) if c else None for c in section_track_list
+        ]
+        cleaned_clips.append(cleaned_section)
 
     print("--- Step 5: Generating rhythm section ---", flush=True)
     drum_inst = generate_drums(plan, bpm, genre_config)
@@ -68,7 +73,7 @@ def generate_song(user_prompt, output_dir="outputs", topic_override=None):
     secs = int(total_seconds % 60)
     print(f"  Total Duration: {mins}:{secs:02d}", flush=True)
 
-    render_custom_wav(midi_file, wav_file)
+    render_custom_wav(midi_file, wav_file, genre=genre)
     
     print(f"--- Finished: {title} ---", flush=True)
     return midi_file, wav_file

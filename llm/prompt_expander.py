@@ -47,4 +47,33 @@ STRUCTURE TEMPLATE TO FOLLOW:
 Output the expansion as a single, coherent, highly descriptive paragraph.
 """
 
+    # --- Forensic Production Standards Injection ---
+    forensic_instructions = ""
+    if genre == "futurepop":
+        forensic_instructions = (
+            "\n\nFORENSIC PRODUCTION STANDARDS (FUTUREPOP - REPORT BASED):\n"
+            "- BPM Architecture: High-energy drive (180-280 BPM).\n"
+            "- Rhythm Grid: Precise layering of 1/4, 1/8, and 1/16 note sequences.\n"
+            "- Layering: Combine 'Church Organ' or 'Drawbar Organ' with 'Synth Bass' and 'Choir Aahs' for a wall-of-sound effect.\n"
+            "- Structural DNA: High frequency of 'DROPS' (total silence for 1 bar) before major transitions.\n"
+            "- Pitch Range: Sub-bass (C1-C2) paired with High-Lead Shimmer (C4-G7)."
+        )
+    elif genre == "ebm":
+        forensic_instructions = (
+            "\n\nFORENSIC PRODUCTION STANDARDS (EBM):\n"
+            "- Rhythm Grid: Driving 1/16 note staccato sequences.\n"
+            "- Bass Architecture: Monophonic galloping basslines in the C1-C2 range.\n"
+            "- Density: Minimal melodic density; focus on rhythmic stabs.\n"
+            "- Atmosphere: Industrial, distorted, and clinical textures."
+        )
+    elif genre == "chillout":
+        forensic_instructions = (
+            "\n\nFORENSIC PRODUCTION STANDARDS (CHILLOUT/AMBIENT):\n"
+            "- Rhythm Grid: Slow 1/4 note grids or beatless textures.\n"
+            "- Texture: High polyphony (4+ voices) for pads and drones.\n"
+            "- Frequency Grounding: Sub-bass (20-60Hz) and Shimmer (10kHz+) are mandatory.\n"
+            "- Melodic Style: Expressive piano/rhodes with long sustain and bluesy motifs."
+        )
+
+    prompt = f"{prompt}{forensic_instructions}"
     return ask_llm(prompt)

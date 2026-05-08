@@ -12,17 +12,22 @@ def create_song_plan(expanded_prompt, genre="chillout"):
     """
     Creates a JSON song plan using Llama3, enforcing genre-specific track counts.
     """
-    import config
-    genre_conf = config.GENRES.get(genre, config.GENRES["chillout"])
+    from core.style_config import STYLE_DATA
+    style_info = STYLE_DATA.get(genre, STYLE_DATA["chillout"])
+    genre_conf = style_info["pipeline"]
+    
     min_t = genre_conf["min_tracks"]
     max_t = genre_conf["max_tracks"]
     min_b = genre_conf["min_bars"]
     max_b = genre_conf["max_bars"]
+    
+    # Get estimated BPM from style data ranges
+    est_bpm = style_info["bpm_ranges"][0][0]
 
     enforcement = (
         f"\nOBLIGATORY DURATION CONTROL:\n"
         f"- Target Duration: 4:00 to 6:30 minutes.\n"
-        f"- BPM: {genre_conf.get('bpm', [120, 120])[0]} (Estimated)\n"
+        f"- BPM: {est_bpm} (Estimated)\n"
         f"- Total Bars MUST be between {min_b} and {max_b} bars total.\n"
         f"- If you use fewer than {min_b} bars, the song will be too short. If you use more than {max_b}, it will be too long.\n"
         f"- Every section MUST describe at least {min_t} and at most {max_t} tracks."

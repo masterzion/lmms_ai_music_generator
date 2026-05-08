@@ -15,7 +15,7 @@ def generate_midi_clip(prompt):
     
     try:
         print(f"  [API] Sending request to {url}...", flush=True)
-        response = requests.post(url, json=payload, timeout=300)
+        response = requests.post(url, json=payload, timeout=900)
         response.raise_for_status()
         
         data = response.json()

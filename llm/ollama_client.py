@@ -9,9 +9,7 @@ MODEL = "llama3:8b"
 def ask_llm(prompt, temperature=0.1):
 
     response = requests.post(
-
         OLLAMA_URL,
-
         json={
             "model": MODEL,
             "prompt": prompt,
@@ -19,8 +17,8 @@ def ask_llm(prompt, temperature=0.1):
             "options": {
                 "temperature": temperature
             }
-        }
-
+        },
+        timeout=600
     )
 
     data = response.json()

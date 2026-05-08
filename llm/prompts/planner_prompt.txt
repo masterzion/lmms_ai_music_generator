@@ -10,8 +10,18 @@ Schema:
     {
       "name": string,
       "bars": integer,
-      "midi_prompts": [string],
-      "transition": string
+      "transition": string,
+      "tracks": [
+        {
+          "name": string,
+          "midi_prompt": string,
+          "polyphony": integer,
+          "grid": string,
+          "density": float,
+          "pitch_range": [integer, integer],
+          "is_drum": boolean
+        }
+      ]
     }
   ]
 }
@@ -20,13 +30,11 @@ Requirements:
 - DURATION: MUST be between 4:00 and 6:30 minutes (OBLIGATORY). 
 - STRUCTURE: STRICTLY follow the section sequence and transitions described in the expansion prompt.
 - DIVERSITY: Each section MUST have a unique identity (varying density, energy, and instrumentation).
-- 10-12 TRACKS: Every midi_prompt MUST specify at least 10 tracks for a professional "wall-of-sound" arrangement.
-- DROPS: Every song MUST have at least one 'drop' transition (sudden silence/velocity dip) EVERY 32 BARS. 
-- SECTION CONTRAST: Every section MUST have a unique identity and different instrument combinations.
-- PIANO SOLO: Every song MUST include a dedicated 'Piano Solo' section (at least 8-16 bars).
-- HARMONY: Follow the specific scale/harmony mentioned in the production plan.
-- PIANO: Every song MUST have 2 to 3 DISTINCT Piano tracks with style-based patterns.
-- NO MUTE TRACKS: Every track MUST have notes in the MIDI, but they can be silenced by the 'transition: drop' field.
-- PRODUCTION SECRETS: Describe tracks using professional terms: 'Sidechained Pumping', 'Octave Jumps', 'Open Voicings'.
-- FX: Incorporate the specific effects mentioned (e.g., Bitcrusher, Gated Reverb, Sidechain).
+- NO COMMENTS: Do NOT include ANY comments (no /* */ or //) inside the JSON.
+- NO PLACEHOLDERS: Every section MUST include the FULL list of tracks. Never use "same as previous" or similar placeholders.
+- 10-12 TRACKS: Every section MUST have at least 10-12 tracks for a professional "wall-of-sound".
+- DROPS: Every song MUST have at least one 'drop' transition EVERY 32 BARS.
+- PIANO SOLO: Every song MUST include a dedicated 'Piano Solo' section (8-16 bars).
+- PIANO: Every song MUST have 2 to 3 DISTINCT Piano tracks.
+- PRODUCTION SECRETS: Use 'Sidechained Pumping', 'Octave Jumps', 'Open Voicings'.
 - No explanations, no markdown, valid JSON only.

@@ -25,7 +25,7 @@ class ConvertRequest(BaseModel):
 # Global state for the model
 model = None
 tokenizer = None
-model_path = "slseanwu/MIDI-LLM_Llama-3.2-1B"
+model_path = "models/MIDI-LLM"
 output_dir = Path("./outputs/api_generated")
 
 @app.on_event("startup")

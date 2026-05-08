@@ -60,25 +60,27 @@ def assemble_song(bpm, plan, melody_clips, drum_inst, bass_inst, pads_inst, pian
                         # Dim selected tracks by 80% for this section
                         note.velocity = max(10, int(note.velocity * 0.2))
 
-        # If we have a melody clip for this section, add it
+        # If we have melody clips for this section, add them
         if i < len(melody_clips) and melody_clips[i]:
-            clip = melody_clips[i]
-            for inst in clip.instruments:
-                new_inst = pretty_midi.Instrument(program=inst.program)
-                for note in inst.notes:
-                    new_note = pretty_midi.Note(
-                        velocity=note.velocity,
-                        pitch=note.pitch,
-                        start=note.start + current_time,
-                        end=note.end + current_time
-                    )
-                    # Don't drop melody, only deterministic backing
-                    new_inst.notes.append(new_note)
-                song.instruments.append(new_inst)
+            tracks_in_section = melody_clips[i]
+            for clip in tracks_in_section:
+                if not clip: continue
+                for inst in clip.instruments:
+                    new_inst = pretty_midi.Instrument(program=inst.program, name=inst.name)
+                    for note in inst.notes:
+                        new_note = pretty_midi.Note(
+                            velocity=note.velocity,
+                            pitch=note.pitch,
+                            start=note.start + current_time,
+                            end=note.end + current_time
+                        )
+                        new_inst.notes.append(new_note)
+                    song.instruments.append(new_inst)
         
         # Apply the drop to the deterministic tracks if needed
         # (This is a simplified implementation: we'd ideally trim the notes 
         # that overlap with the drop period)
+        current_time += section_duration
         
     # Apply drops to deterministic tracks
     current_time = 0.0

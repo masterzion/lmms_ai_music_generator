@@ -8,18 +8,30 @@ STYLE_DATA = {
             "Factory Intro -> Mechanical Groove -> Vocal Command -> Breakdown -> Full Assault -> Outro"
         ],
         "effects": ["Bitcrusher", "Bandpass Filter", "Heavy Distortion", "Gated Reverb", "Sidechain Compression"],
-        "piano_solo_style": "Dissonant, aggressive, highly rhythmic stabs, minor 2nd intervals, high-pitched piercing runs."
+        "piano_solo_style": "Dissonant, aggressive, highly rhythmic stabs, minor 2nd intervals, high-pitched piercing runs.",
+        "pipeline": {
+            "min_tracks": 10, "max_tracks": 14,
+            "min_bars": 128, "max_bars": 180,
+            "minor_only": True, "melody_density": 0.2,
+            "drum_density": 1.0, "humanization": 0.0, "bass_repetition": 0.95
+        }
     },
     "futurepop": {
-        "bpm_ranges": [[130, 135], [135, 145]],
-        "common_instruments": ["Trance Lead", "Super Saw", "Sidechained Pad", "Gated Strings", "Fast Arpeggio", "Club Kick", "Emotional Piano", "Vocoder FX"],
+        "bpm_ranges": [[180, 240], [240, 280]],
+        "common_instruments": ["Church Organ", "Drawbar Organ", "Trance Lead", "Super Saw", "Sidechained Pad", "Gated Strings", "Fast Arpeggio", "Club Kick", "Emotional Piano", "Vocoder FX", "Choir Aahs"],
         "harmonies": ["Aeolian (Melancholic)", "Dorian (Uplifting Minor)", "Harmonic Minor", "Suspended 4th Chords"],
         "structures": [
             "Atmospheric Intro -> Verse -> Build-up -> Anthem Chorus -> Breakdown -> Final Chorus -> Outro",
             "Club Intro -> Groove Verse -> Emotional Lift -> Main Hook -> Instrumental Break -> Outro"
         ],
         "effects": ["Ping-Pong Delay", "Large Hall Reverb", "Phaser", "Sidechain (Pumping)", "High-Shelf Boost"],
-        "piano_solo_style": "Uplifting, fast arpeggios, melodic octaves, anthem-like emotional progression."
+        "piano_solo_style": "Uplifting, fast arpeggios, melodic octaves, anthem-like emotional progression.",
+        "pipeline": {
+            "min_tracks": 12, "max_tracks": 24,
+            "min_bars": 144, "max_bars": 210,
+            "minor_only": False, "melody_density": 0.8,
+            "drum_density": 0.9, "humanization": 0.05, "bass_repetition": 0.7
+        }
     },
     "chillout": {
         "bpm_ranges": [[80, 90], [90, 110]],
@@ -30,6 +42,12 @@ STYLE_DATA = {
             "Pad Intro -> Bass Groove -> Chill Melody -> Minimal Breakdown -> Atmospheric Outro"
         ],
         "effects": ["Vinyl Crackle", "Long Tail Reverb", "Soft Low-Pass Filter", "Chorus", "Ping-Pong Delay"],
-        "piano_solo_style": "Expressive, sparse, jazz-inflected runs, bluesy motifs, long sustain, Satie-esque minimalism."
+        "piano_solo_style": "Expressive, sparse, jazz-inflected runs, bluesy motifs, long sustain, Satie-esque minimalism.",
+        "pipeline": {
+            "min_tracks": 10, "max_tracks": 16,
+            "min_bars": 80, "max_bars": 130,
+            "minor_only": False, "melody_density": 0.3,
+            "drum_density": 0.4, "humanization": 0.15, "bass_repetition": 0.5
+        }
     }
 }
