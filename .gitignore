@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+models/
+batch_client/outputs/
+.ipynb_checkpoints/
+.DS_Store
+*.wav
+*.mid
