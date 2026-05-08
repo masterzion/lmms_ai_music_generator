@@ -3,3 +3,11 @@ mido
 pydantic
 requests
 numpy
+fastapi
+uvicorn
+midi2audio
+huggingface_hub
+transformers
+torch
+python-dotenv
+scipy

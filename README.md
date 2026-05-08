@@ -18,13 +18,13 @@ The API is the central hub for generating songs.
 
 ### Running the API
 ```bash
-uvicorn midi_llm_api:app --host 0.0.0.0 --port 8000
+./venv/bin/python -m uvicorn midi_llm_api:app --host 0.0.0.0 --port 8000
 ```
 
 ### Endpoints
 - **POST `/generate`**: Main generation endpoint.
-  - **Body**: `{ "prompt": "genre:topic Prompt text" }`
-  - **Returns**: A high-density MIDI file.
+- **Body**: `{ "prompt": "genre:topic Prompt text" }`
+- **Returns**: A high-density MIDI file.
 
 ---
 
@@ -36,7 +36,7 @@ The batch client automates the production of multiple songs based on a list.
 1. Edit `batch_client/songs_to_generate.txt` with your desired songs (format: `genre:topic:prompt`).
 2. Run the processor:
    ```bash
-   python batch_client/batch_processor.py
+   ./venv/bin/python batch_client/batch_processor.py
    ```
 
 ### Key Features
@@ -64,7 +64,7 @@ The exporter allows you to move your AI-generated MIDI into a professional DAW (
 
 ### Usage
 ```bash
-python exporter/midi_to_lmms.py --input path/to/song.mid --output path/to/project.mmpz
+./venv/bin/python exporter/midi_to_lmms.py <path_to_midi_file>
 ```
 
 ### Routing
