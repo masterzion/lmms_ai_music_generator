@@ -12,23 +12,44 @@ The system is divided into four main layers:
 
 ---
 
-## 2. The API (FastAPI)
+## 2. The API (MIDI-LLM)
 
-The API is the central hub for generating songs.
+The API is the central hub for generating songs. It includes **Automatic Hardware Detection** for Steam Deck/AMD hardware.
 
 ### Running the API
 ```bash
-./venv/bin/python -m uvicorn midi_llm_api:app --host 0.0.0.0 --port 8000
+./venv/bin/python midi_llm_api.py
 ```
+*Note: The API now defaults to port **9000** to avoid conflicts and includes automatic setup of GFX overrides for Steam Deck.*
 
-### Endpoints
-- **POST `/generate`**: Main generation endpoint.
-- **Body**: `{ "prompt": "genre:topic Prompt text" }`
-- **Returns**: A high-density MIDI file.
+### Hardware Support
+- **NVIDIA**: Automatic CUDA acceleration.
+- **Steam Deck / AMD**: Automatic hardware detection. If detected, it applies `HSA_OVERRIDE_GFX_VERSION=10.3.0` and optimizes loading for the 16GB RAM environment.
+- **CPU Fallback**: Uses optimized `float32` precision for stable, high-quality generation on systems without a supported GPU.
+
+### Features
+- **JSON Repair**: Robust regex-based repair for LLM-generated JSON, automatically handling unquoted note names (e.g., `[C1, C2]`) and converting them to MIDI integers.
+- **Lifespan Management**: Uses modern FastAPI lifespan handlers for reliable model loading/unloading.
 
 ---
 
-## 3. The Batch Client (Mass Production)
+## 3. The Main Entry Point
+
+Generate a complete song from a single command:
+```bash
+./venv/bin/python main.py --prompt "<futurepop> Neon Dreams"
+```
+
+### Duration Control
+The system enforces a target duration of **4:00 to 6:30 minutes**. 
+- **Dynamic Bar Calculation**: Bar counts are automatically adjusted based on genre and BPM:
+    - **Futurepop**: 220–360 bars (at 240+ BPM).
+    - **EBM**: 128–180 bars (at 120 BPM).
+    - **Chillout**: 100–160 bars (at 90 BPM).
+
+---
+
+## 4. The Batch Client (Mass Production)
 
 The batch client automates the production of multiple songs based on a list.
 
