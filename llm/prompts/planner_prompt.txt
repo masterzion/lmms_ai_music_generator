@@ -18,7 +18,7 @@ Schema:
           "polyphony": integer,
           "grid": string,
           "density": float,
-          "pitch_range": [integer, integer],  // MIDI note numbers (0-127). Example: [36, 48]
+          "pitch_range": [integer, integer],
           "is_drum": boolean
         }
       ]
@@ -27,6 +27,8 @@ Schema:
 }
 
 Requirements:
+- MIDI PROMPT: The midi_prompt field MUST NOT be empty. Use descriptive musical instructions like "Haunting minor melody with staccato notes" or "Uplifting lead arpeggio in 1/16th notes".
+- PITCH RANGE: Use MIDI note numbers (0-127) for pitch_range. Example: [36, 48].
 - DURATION: MUST be between 4:00 and 6:30 minutes (OBLIGATORY). 
 - STRUCTURE: STRICTLY follow the section sequence and transitions described in the expansion prompt.
 - DIVERSITY: Each section MUST have a unique identity (varying density, energy, and instrumentation).
