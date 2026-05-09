@@ -66,6 +66,16 @@ def create_song_plan(expanded_prompt, genre="chillout"):
         if start != -1 and end != -1:
             raw = raw[start:end+1]
 
+    # CLEANUP: Fix common LLM JSON errors before parsing
+    import re
+    
+    # 1. Fix unquoted pitch ranges like [C1, C2] -> ["C1", "C2"]
+    # This specifically targets arrays of characters and numbers that aren't quoted
+    raw = re.sub(r'\[([A-G][b#]?[0-9]),\s*([A-G][b#]?[0-9])\]', r'["\1", "\2"]', raw)
+    
+    # 2. Fix trailing commas in arrays/objects
+    raw = re.sub(r',\s*([\]}])', r'\1', raw)
+
     print(f"DEBUG: Final string for JSON parsing:\n{raw}\n", flush=True)
 
     try:

@@ -18,7 +18,7 @@ Schema:
           "polyphony": integer,
           "grid": string,
           "density": float,
-          "pitch_range": [integer, integer],
+          "pitch_range": [integer, integer],  // MIDI note numbers (0-127). Example: [36, 48]
           "is_drum": boolean
         }
       ]

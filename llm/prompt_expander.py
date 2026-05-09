@@ -56,13 +56,13 @@ Output the expansion as a single, coherent, highly descriptive paragraph.
             "- Rhythm Grid: Precise layering of 1/4, 1/8, and 1/16 note sequences.\n"
             "- Layering: Combine 'Church Organ' or 'Drawbar Organ' with 'Synth Bass' and 'Choir Aahs' for a wall-of-sound effect.\n"
             "- Structural DNA: High frequency of 'DROPS' (total silence for 1 bar) before major transitions.\n"
-            "- Pitch Range: Sub-bass (C1-C2) paired with High-Lead Shimmer (C4-G7)."
+            "- Pitch Range: Sub-bass (C1-C2, MIDI 24-36) paired with High-Lead Shimmer (C4-G7, MIDI 60-103)."
         )
     elif genre == "ebm":
         forensic_instructions = (
             "\n\nFORENSIC PRODUCTION STANDARDS (EBM):\n"
             "- Rhythm Grid: Driving 1/16 note staccato sequences.\n"
-            "- Bass Architecture: Monophonic galloping basslines in the C1-C2 range.\n"
+            "- Bass Architecture: Monophonic galloping basslines in the C1-C2 (MIDI 24-36) range.\n"
             "- Density: Minimal melodic density; focus on rhythmic stabs.\n"
             "- Atmosphere: Industrial, distorted, and clinical textures."
         )

@@ -7,3 +7,8 @@ models/
 .DS_Store
 *.wav
 *.mid
+.env
+*.sf2
+MIDI-LLM
+soundfonts
+soundfonts/FluidR3_GM.sf2
