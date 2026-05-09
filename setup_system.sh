@@ -53,41 +53,46 @@ echo "Detecting hardware for optimal PyTorch installation..."
 INSTALL_MODE="cpu"
 TORCH_URL="https://download.pytorch.org/whl/cpu"
 
+# Safely attempt to get the GPU vendor ID using lspci
+GPU_VENDOR_ID=""
+if command -v lspci &> /dev/null; then
+    # Extract the 4-hex-digit vendor ID (e.g., 10de for NVIDIA, 1002 for AMD)
+    GPU_VENDOR_ID=$(lspci -nn | grep -E -i "vga|3d|display" | grep -o '\[[0-9a-fA-F]\{4\}:' | head -n 1 | tr -d '[:]')
+fi
+
 # Check for manual CPU override
 if [ "${FORCE_CPU}" == "1" ]; then
     echo "FORCE_CPU=1 detected. Defaulting to CPU mode."
-# Check for NVIDIA GPU with at least 4GB VRAM
-elif command -v nvidia-smi &> /dev/null; then
-    VRAM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -n 1)
-    if [ "$VRAM" -ge 4000 ]; then
-        echo "Detected NVIDIA GPU with ${VRAM}MB VRAM. Using CUDA mode."
-        INSTALL_MODE="cuda"
-        TORCH_URL="" # Use default index
+# Check for NVIDIA GPU (Vendor ID: 10de)
+elif [ "$GPU_VENDOR_ID" == "10de" ]; then
+    echo "Detected NVIDIA GPU (Vendor ID: 10de)."
+    if command -v nvidia-smi &> /dev/null; then
+        VRAM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -n 1)
+        if [ "$VRAM" -ge 4000 ]; then
+            echo "NVIDIA GPU has ${VRAM}MB VRAM. Using CUDA mode."
+            INSTALL_MODE="cuda"
+            TORCH_URL="" # Use default index
+        else
+            echo "NVIDIA GPU VRAM (${VRAM}MB) is too low for LLMs. Defaulting to CPU."
+        fi
     else
-        echo "Detected NVIDIA GPU but VRAM (${VRAM}MB) is too low for LLMs. Defaulting to CPU."
+        echo "nvidia-smi not found. Defaulting to CPU mode as safety fallback."
     fi
-# Check for AMD GPU (ROCm) or Steam Deck APU
-elif [ -d "/opt/rocm" ] || command -v rocm-smi &> /dev/null || (command -v lspci &> /dev/null && lspci 2>/dev/null | grep -qi "VGA.*AMD") || (cat /sys/class/drm/card0/device/vendor 2>/dev/null | grep -qi "0x1002"); then
-    echo "Detected AMD GPU/ROCm environment (Steam Deck)."
+# Check for AMD GPU (Vendor ID: 1002)
+elif [ "$GPU_VENDOR_ID" == "1002" ]; then
+    echo "Detected AMD GPU (Vendor ID: 1002). Treating as ROCm/Steam Deck environment."
     
     # Generate/Update .env file with Steam Deck specific overrides
-    # These are safe even if running in CPU mode as they only activate if ROCm is used
     echo "Creating/Updating .env file with hardware overrides..."
     touch .env
     grep -q "HSA_OVERRIDE_GFX_VERSION" .env || echo "HSA_OVERRIDE_GFX_VERSION=10.3.0" >> .env
     grep -q "FORCE_CPU" .env || echo "FORCE_CPU=0" >> .env
 
-    # Check if we should attempt ROCm installation
-    if [ "${FORCE_ROCM}" == "1" ]; then
-        echo "FORCE_ROCM=1 detected. Attempting to install ROCm nightly for Python 3.13..."
-        INSTALL_MODE="rocm"
-        TORCH_URL="https://download.pytorch.org/whl/nightly/rocm6.2"
-    else
-        echo "Defaulting to stable CPU mode for Python 3.13 compatibility."
-        echo "Note: Hardware detection is active. The API will automatically use the GPU if compatible drivers are found."
-        INSTALL_MODE="cpu"
-        TORCH_URL="https://download.pytorch.org/whl/cpu"
-    fi
+    echo "Auto-configuring PyTorch ROCm nightly for Python 3.13 compatibility..."
+    INSTALL_MODE="rocm"
+    TORCH_URL="https://download.pytorch.org/whl/nightly/rocm6.2"
+else
+    echo "No supported dedicated GPU detected via lspci. Defaulting to CPU mode."
 fi
 
 echo "Installing Python dependencies in ${INSTALL_MODE} mode..."
