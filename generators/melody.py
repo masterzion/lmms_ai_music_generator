@@ -14,7 +14,7 @@ def generate_melody(plan):
         print(f"  Section {i+1} ({section_name}): Processing {len(section.get('tracks', []))} tracks...", flush=True)
         
         for track_plan in section.get("tracks", []):
-            if track_plan.get("is_drum"): continue # Handled by drum generator
+            is_drum = track_plan.get("is_drum", False)
             
             prompt = track_plan["midi_prompt"]
             # Forensic enhancement of the prompt
@@ -25,12 +25,13 @@ def generate_melody(plan):
                 f"Range: MIDI {track_plan.get('pitch_range', [36, 84])}."
             )
             
-            print(f"    - Generating '{track_plan['name']}'...", flush=True)
+            print(f"    - Generating '{track_plan['name']}' {'(Drum)' if is_drum else ''}...", flush=True)
             clip = generate_midi_clip(enhanced_prompt)
             if clip:
-                # Apply track name to the instrument in the clip
+                # Apply track name and drum status to the instrument in the clip
                 for inst in clip.instruments:
                     inst.name = track_plan["name"]
+                    inst.is_drum = is_drum
                 tracks_in_section.append(clip)
             else:
                 tracks_in_section.append(None)

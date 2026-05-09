@@ -66,7 +66,11 @@ def assemble_song(bpm, plan, melody_clips, drum_inst, bass_inst, pads_inst, pian
             for clip in tracks_in_section:
                 if not clip: continue
                 for inst in clip.instruments:
-                    new_inst = pretty_midi.Instrument(program=inst.program, name=inst.name)
+                    new_inst = pretty_midi.Instrument(
+                        program=inst.program, 
+                        is_drum=inst.is_drum,
+                        name=inst.name
+                    )
                     for note in inst.notes:
                         new_note = pretty_midi.Note(
                             velocity=note.velocity,

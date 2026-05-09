@@ -34,7 +34,8 @@ Requirements:
 - DIVERSITY: Each section MUST have a unique identity (varying density, energy, and instrumentation).
 - NO COMMENTS: Do NOT include ANY comments (no /* */ or //) inside the JSON.
 - NO PLACEHOLDERS: Every section MUST include the FULL list of tracks. Never use "same as previous" or similar placeholders.
-- 10-12 TRACKS: Every section MUST have at least 10-12 tracks for a professional "wall-of-sound".
+- 10-12 TRACKS: Every section MUST have at least 10-12 tracks total for a professional "wall-of-sound".
+- PERCUSSION LIMIT: Every section MUST have EXACTLY ONE 'Drums' track and EXACTLY ONE 'Clap' track. Both MUST have "is_drum": true. Do NOT add other percussion tracks.
 - DROPS: Every song MUST have at least one 'drop' transition EVERY 32 BARS.
 - PIANO SOLO: Every song MUST include a dedicated 'Piano Solo' section (8-16 bars).
 - PIANO: Every song MUST have 2 to 3 DISTINCT Piano tracks.
