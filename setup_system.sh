@@ -1,3 +1,7 @@
+
+
+
+
 #!/bin/bash
 set -e
 
@@ -41,10 +45,20 @@ else
     curl -L -s -o "$SF_PATH" "https://github.com/pianobooster/fluid-soundfont/releases/download/v3.1/FluidR3_GM.sf2"
 fi
 
-# 4. Virtual Environment
+# 4. Virtual Environment & Package Manager Setup
+echo "Setting up uv package manager..."
+if ! command -v uv &>/dev/null; then
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+fi
+
+echo "Creating virtual environment using uv..."
+# Force UV to copy instead of hardlink for Steam Deck filesystem compatibility
+export UV_LINK_MODE=copy
+
 if [ ! -d "venv" ]; then
-    echo "Creating virtual environment..."
-    python3 -m venv venv
+    # Crucial: Force Python 3.11 to bypass Python 3.13 PyTorch incompatibilities
+    uv venv venv --python 3.11
 fi
 
 # 5. Hardware Detection & Python Packages
@@ -86,33 +100,46 @@ elif [ "$GPU_VENDOR_ID" == "1002" ]; then
     echo "Creating/Updating .env file with hardware overrides..."
     touch .env
     grep -q "HSA_OVERRIDE_GFX_VERSION" .env || echo "HSA_OVERRIDE_GFX_VERSION=10.3.0" >> .env
+    grep -q "HSA_ENABLE_SDMA" .env || echo "HSA_ENABLE_SDMA=0" >> .env
+    grep -q "MIOPEN_FIND_MODE" .env || echo "MIOPEN_FIND_MODE=FAST" >> .env
     grep -q "FORCE_CPU" .env || echo "FORCE_CPU=0" >> .env
 
-    echo "Auto-configuring PyTorch ROCm nightly for Python 3.13 compatibility..."
+    echo "Auto-configuring PyTorch ROCm 6.3 for Python 3.11 compatibility..."
     INSTALL_MODE="rocm"
-    TORCH_URL="https://download.pytorch.org/whl/nightly/rocm6.2"
+    TORCH_URL="https://download.pytorch.org/whl/rocm6.3"
 else
     echo "No supported dedicated GPU detected via lspci. Defaulting to CPU mode."
 fi
 
 echo "Installing Python dependencies in ${INSTALL_MODE} mode..."
-source venv/bin/activate
-pip install --upgrade pip
 
 if [ "$INSTALL_MODE" == "cpu" ]; then
-    # Use stable 2.6.0+cpu for Python 3.13
-    pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url "$TORCH_URL"
+    uv pip install --python venv/bin/python --force-reinstall \
+        torch torchvision torchaudio \
+        --index-url "$TORCH_URL"
 else
-    # Use nightly/pre-release for ROCm 6.2 + Python 3.13 compatibility
-    pip install --pre torch torchvision torchaudio --index-url "$TORCH_URL" --extra-index-url https://pypi.org/simple
+    # Install ROCm version mirroring the successful ACE-Step script
+    # Force reinstall ensures any previous corrupted installation is repaired
+    uv pip install --python venv/bin/python --force-reinstall \
+        torch torchvision torchaudio \
+        --index-url "$TORCH_URL"
+    
+    # Optional: Install specialized Triton for ROCm as requested for Steam Deck performance
+    echo "Installing specialized ROCm Triton..."
+    uv pip install --python venv/bin/python --force-reinstall \
+        pytorch-triton-rocm==3.5.1 --index-url "$TORCH_URL" || echo "Note: Specific Triton 3.5.1 not found, continuing..."
 fi
 
 # Ensure compatible numpy for numba
-pip install "numpy<2.3"
+uv pip install --python venv/bin/python "numpy<2.3" --force-reinstall
 
 # 6. MIDI-LLM Repository
 echo "Cloning MIDI-LLM repository..."
-git clone https://github.com/slSeanWU/MIDI-LLM
+if [ ! -d "MIDI-LLM" ]; then
+    git clone https://github.com/slSeanWU/MIDI-LLM
+else
+    echo "MIDI-LLM already exists. Skipping clone."
+fi
 
 
 # 7. MIDI-LLM Dependencies
@@ -122,16 +149,24 @@ FILTER_PATTERN="vllm|nvidia-|cupy-cuda|xformers|triton|torch==|torchvision==|tor
 
 if [ "$INSTALL_MODE" == "cpu" ]; then
     grep -vE "$FILTER_PATTERN" MIDI-LLM/requirements.txt > MIDI-LLM/requirements_filtered.txt
-    pip install -r MIDI-LLM/requirements_filtered.txt
+    uv pip install --python venv/bin/python -r MIDI-LLM/requirements_filtered.txt
 elif [ "$INSTALL_MODE" == "rocm" ]; then
     # For ROCm, we also want to avoid standard CUDA-linked packages
     grep -vE "$FILTER_PATTERN" MIDI-LLM/requirements.txt > MIDI-LLM/requirements_filtered.txt
-    pip install -r MIDI-LLM/requirements_filtered.txt
+    uv pip install --python venv/bin/python -r MIDI-LLM/requirements_filtered.txt
 else
-    pip install -r MIDI-LLM/requirements.txt
+    uv pip install --python venv/bin/python -r MIDI-LLM/requirements.txt
 fi
 
-# 8. Model Download (Optional)
+# 8. Verification
+echo ""
+echo "-------------------------------------------------------"
+echo "8. HARDWARE VERIFICATION"
+echo "-------------------------------------------------------"
+export HSA_OVERRIDE_GFX_VERSION=10.3.0
+./venv/bin/python -c "import torch; print(f'Torch: {torch.__version__}'); print(f'GPU Available: {torch.cuda.is_available()}'); print(f'Device: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"None\"}')"
+
+# 9. Model Download (Optional)
 echo ""
 echo "-------------------------------------------------------"
 echo "8. MODEL DOWNLOAD"
