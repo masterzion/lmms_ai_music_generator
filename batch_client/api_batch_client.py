@@ -4,6 +4,7 @@ import os
 import time
 import argparse
 import sys
+import random
 
 # Add root to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -94,16 +95,18 @@ def run_batch_from_file(file_path, filter_genre=None):
         return
 
     with open(file_path, "r") as f:
-        lines = f.readlines()
+        # Load all valid lines
+        lines = [line.strip() for line in f.readlines() if line.strip() and not line.strip().startswith("#")]
+
+    # Shuffle the lines for random order
+    random.shuffle(lines)
+    print(f"--- Loaded {len(lines)} jobs. Shuffling for random order. ---")
 
     # Create output structure
     base_output = "batch_client/outputs"
     os.makedirs(base_output, exist_ok=True)
 
     for line in lines:
-        line = line.strip()
-        if not line or line.startswith("#"): continue
-        
         parts = line.split(":", 2)
         if len(parts) < 3: continue
         
