@@ -141,7 +141,7 @@ async def generate(req: GenerateRequest):
                 synthesize=False,         # Generation only
                 temperature=req.temperature,
                 top_p=0.98,
-                max_tokens=2046,
+                max_tokens=8192,
                 n_outputs=1
             )
         
@@ -241,7 +241,7 @@ async def generate_from_plan(req: PlanOnlyRequest):
                 synthesize=False,
                 temperature=1.0,
                 top_p=0.98,
-                max_tokens=2046,
+                max_tokens=8192,
                 n_outputs=1
             )
         
