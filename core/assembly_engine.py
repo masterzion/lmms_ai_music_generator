@@ -66,20 +66,37 @@ def assemble_song(bpm, plan, melody_clips, drum_inst, bass_inst, pads_inst, pian
             for clip in tracks_in_section:
                 if not clip: continue
                 for inst in clip.instruments:
+                    # [SMART ARRANGEMENT] 
+                    # Non-drum AI tracks should only exist for the duration of their specific clip/section.
+                    # We ensure they don't leak or play in sections where they weren't planned.
                     new_inst = pretty_midi.Instrument(
                         program=inst.program, 
                         is_drum=inst.is_drum,
                         name=inst.name
                     )
+                    
+                    # Random chance to skip a side-track for arrangement variety (if not a drum)
+                    if not inst.is_drum and random.random() < 0.15:
+                        print(f"  [Assembly] Section {i+1}: Ghosting track '{inst.name}' for variety")
+                        continue
+
                     for note in inst.notes:
-                        new_note = pretty_midi.Note(
-                            velocity=note.velocity,
-                            pitch=note.pitch,
-                            start=note.start + current_time,
-                            end=note.end + current_time
-                        )
-                        new_inst.notes.append(new_note)
-                    song.instruments.append(new_inst)
+                        # Only include notes that fit within the section duration
+                        # This prevents "hanging notes" from leaking into next section
+                        start_abs = note.start + current_time
+                        end_abs = note.end + current_time
+                        
+                        if note.start < section_duration:
+                            new_note = pretty_midi.Note(
+                                velocity=note.velocity,
+                                pitch=note.pitch,
+                                start=start_abs,
+                                end=min(end_abs, current_time + section_duration)
+                            )
+                            new_inst.notes.append(new_note)
+                    
+                    if new_inst.notes:
+                        song.instruments.append(new_inst)
         
         # Apply the drop to the deterministic tracks if needed
         # (This is a simplified implementation: we'd ideally trim the notes 
