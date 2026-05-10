@@ -15,7 +15,7 @@ def generate_midi_clip(prompt):
     print(f"[MIDI-LLM] Prompt: {prompt[:100]}..." if len(prompt) > 100 else f"[MIDI-LLM] Prompt: {prompt}", flush=True)
     
     try:
-        response = requests.post(url, json=payload, timeout=1300)
+        response = requests.post(url, json=payload, timeout=3600)
         response.raise_for_status()
         
         data = response.json()

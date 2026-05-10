@@ -22,7 +22,7 @@ def send_to_api(prompt, topic, genre, output_dir):
     print(f"\n--- STEP 1: Requesting Plan from {full_url} ---")
     try:
         # 1. Get the plan from the API
-        res = requests.post(full_url, json={"user_prompt": prompt}, timeout=1200)
+        res = requests.post(full_url, json={"user_prompt": prompt}, timeout=3600)
         res.raise_for_status()
         plan_data = res.json()
         
@@ -35,7 +35,7 @@ def send_to_api(prompt, topic, genre, output_dir):
         
         # 2. Send the plan back to the generator for MIDI creation
         print(f"--- STEP 2: Sending Plan to Generator at {plan_url} ---")
-        gen_res = requests.post(plan_url, json={"plan": plan}, timeout=1200)
+        gen_res = requests.post(plan_url, json={"plan": plan}, timeout=3600)
         gen_res.raise_for_status()
         gen_data = gen_res.json()
         

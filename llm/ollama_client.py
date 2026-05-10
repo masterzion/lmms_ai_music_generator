@@ -23,7 +23,7 @@ def ask_llm(prompt, temperature=0.1):
                     "temperature": temperature
                 }
             },
-            timeout=1300
+            timeout=3600
         )
         response.raise_for_status()
     except Exception as e:
