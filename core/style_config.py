@@ -11,7 +11,7 @@ STYLE_DATA = {
         "piano_solo_style": "Dissonant, aggressive, highly rhythmic stabs, minor 2nd intervals, high-pitched piercing runs.",
         "pipeline": {
             "min_tracks": 10, "max_tracks": 14,
-            "min_bars": 128, "max_bars": 180,
+            "min_bars": 125, "max_bars": 175,
             "minor_only": True, "melody_density": 0.2,
             "drum_density": 1.0, "humanization": 0.0, "bass_repetition": 0.95
         }
@@ -28,7 +28,7 @@ STYLE_DATA = {
         "piano_solo_style": "Uplifting, fast arpeggios, melodic octaves, anthem-like emotional progression.",
         "pipeline": {
             "min_tracks": 12, "max_tracks": 24,
-            "min_bars": 220, "max_bars": 360,
+            "min_bars": 240, "max_bars": 335,
             "minor_only": False, "melody_density": 0.8,
             "drum_density": 0.9, "humanization": 0.05, "bass_repetition": 0.7
         }
@@ -45,7 +45,7 @@ STYLE_DATA = {
         "piano_solo_style": "Expressive, sparse, jazz-inflected runs, bluesy motifs, long sustain, Satie-esque minimalism.",
         "pipeline": {
             "min_tracks": 10, "max_tracks": 16,
-            "min_bars": 100, "max_bars": 160,
+            "min_bars": 100, "max_bars": 138,
             "minor_only": False, "melody_density": 0.3,
             "drum_density": 0.4, "humanization": 0.15, "bass_repetition": 0.5
         }

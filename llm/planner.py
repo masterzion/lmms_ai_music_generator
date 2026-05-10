@@ -27,7 +27,7 @@ def create_song_plan(expanded_prompt, genre="chillout"):
 
     enforcement = (
         f"\nOBLIGATORY DURATION CONTROL:\n"
-        f"- Target Duration: 4:00 to 6:30 minutes.\n"
+        f"- Target Duration: 4:10 to 5:50 minutes.\n"
         f"- BPM: {est_bpm} (Estimated)\n"
         f"- Total Bars MUST be between {min_b} and {max_b} bars total.\n"
         f"- If you use fewer than {min_b} bars, the song will be too short. If you use more than {max_b}, it will be too long.\n"
