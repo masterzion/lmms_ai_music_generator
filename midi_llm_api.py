@@ -119,6 +119,9 @@ tokenizer = None
 model_path = "models/MIDI-LLM"
 output_dir = Path("./outputs/api_generated")
 
+# Semaphore to limit concurrent generation tasks
+generation_semaphore = asyncio.Semaphore(2)
+
 # Removed @app.on_event("startup") def load_model()
 
 @app.post("/generate")
@@ -126,20 +129,21 @@ async def generate(req: GenerateRequest):
     print(f"Received prompt: {req.prompt}")
     
     try:
-        # Run the synchronous generation in a threadpool to remain responsive
-        stats = await run_in_threadpool(
-            generate_from_prompts_hf,
-            model=model,
-            tokenizer=tokenizer,
-            prompts=[req.prompt],
-            output_dir=output_dir,
-            model_path=model_path,
-            synthesize=False,         # Generation only
-            temperature=req.temperature,
-            top_p=0.98,
-            max_tokens=2046,
-            n_outputs=1
-        )
+        async with generation_semaphore:
+            # Run the synchronous generation in a threadpool to remain responsive
+            stats = await run_in_threadpool(
+                generate_from_prompts_hf,
+                model=model,
+                tokenizer=tokenizer,
+                prompts=[req.prompt],
+                output_dir=output_dir,
+                model_path=model_path,
+                synthesize=False,         # Generation only
+                temperature=req.temperature,
+                top_p=0.98,
+                max_tokens=2046,
+                n_outputs=1
+            )
         
         if stats['output_files']:
             midi_file = stats['output_files'][0]
@@ -225,20 +229,21 @@ async def generate_from_plan(req: PlanOnlyRequest):
         return {"status": "error", "message": "No tracks found in plan."}
 
     try:
-        # Generate all clips in batch
-        stats = await run_in_threadpool(
-            generate_from_prompts_hf,
-            model=model,
-            tokenizer=tokenizer,
-            prompts=prompts,
-            output_dir=output_dir,
-            model_path=model_path,
-            synthesize=False,
-            temperature=1.0,
-            top_p=0.98,
-            max_tokens=2046,
-            n_outputs=1
-        )
+        async with generation_semaphore:
+            # Generate all clips in batch
+            stats = await run_in_threadpool(
+                generate_from_prompts_hf,
+                model=model,
+                tokenizer=tokenizer,
+                prompts=prompts,
+                output_dir=output_dir,
+                model_path=model_path,
+                synthesize=False,
+                temperature=1.0,
+                top_p=0.98,
+                max_tokens=2046,
+                n_outputs=1
+            )
         
         results = []
         for i, midi_path in enumerate(stats.get('output_files', [])):
