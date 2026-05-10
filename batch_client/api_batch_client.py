@@ -17,6 +17,7 @@ def send_to_api(prompt, topic, genre, output_dir):
     """
     full_url = f"{config.MIDI_LLM_API_BASE}/generate_full"
     plan_url = f"{config.MIDI_LLM_API_BASE}/generate_from_plan"
+    convert_url = f"{config.MIDI_LLM_API_BASE}/convert"
     download_url = f"{config.MIDI_LLM_API_BASE}/download"
     
     print(f"\n--- STEP 1: Requesting Plan from {full_url} ---")
@@ -44,7 +45,7 @@ def send_to_api(prompt, topic, genre, output_dir):
             return None
             
         # 3. Download the generated files
-        print(f"--- STEP 3: Downloading {len(gen_data['files'])} MIDI files ---")
+        print(f"--- STEP 3: Downloading and Converting {len(gen_data['files'])} MIDI files ---")
         safe_genre = genre.lower().strip()
         safe_topic = topic.lower().strip()
         target_dir = os.path.join(output_dir, safe_genre, safe_topic)
@@ -55,13 +56,30 @@ def send_to_api(prompt, topic, genre, output_dir):
             remote_path = file_entry["midi_path"]
             info = file_entry["info"]
             
+            # Download MIDI
             dl_res = requests.get(download_url, params={"path": remote_path})
             if dl_res.status_code == 200:
                 local_filename = f"{info['section']}_{info['track']}_{int(time.time())}.mid".replace(" ", "_")
                 local_path = os.path.join(target_dir, local_filename)
                 with open(local_path, "wb") as f:
                     f.write(dl_res.content)
-                print(f"  SAVED: {local_path}")
+                print(f"  SAVED MIDI: {local_path}")
+                
+                # STEP 4: Convert to WAV via API
+                print(f"  CONVERTING to WAV...")
+                conv_res = requests.post(convert_url, json={"midi_path": remote_path})
+                if conv_res.status_code == 200:
+                    conv_data = conv_res.json()
+                    if conv_data.get("status") == "success":
+                        remote_wav_path = conv_data["wav_path"]
+                        # Download WAV
+                        wav_dl_res = requests.get(download_url, params={"path": remote_wav_path})
+                        if wav_dl_res.status_code == 200:
+                            local_wav_path = local_path.replace(".mid", ".wav")
+                            with open(local_wav_path, "wb") as f:
+                                f.write(wav_dl_res.content)
+                            print(f"  SAVED WAV:  {local_wav_path}")
+                
                 downloaded_paths.append(local_path)
         
         return downloaded_paths
