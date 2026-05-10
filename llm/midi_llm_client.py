@@ -8,14 +8,14 @@ def generate_midi_clip(prompt):
     Calls the local FastAPI server for slseanwu/MIDI-LLM_Llama-3.2-1B generation.
     Returns a pretty_midi object containing the generated clip.
     """
-    print(f"[MIDI-LLM] Requesting clip for prompt: {prompt}")
-    
     url = f"{config.MIDI_LLM_API_BASE}/generate"
     payload = {"prompt": prompt, "temperature": 1.0}
     
+    print(f"\n[MIDI-LLM] Requesting clip from {url}...", flush=True)
+    print(f"[MIDI-LLM] Prompt: {prompt[:100]}..." if len(prompt) > 100 else f"[MIDI-LLM] Prompt: {prompt}", flush=True)
+    
     try:
-        print(f"  [API] Sending request to {url}...", flush=True)
-        response = requests.post(url, json=payload, timeout=900)
+        response = requests.post(url, json=payload, timeout=1300)
         response.raise_for_status()
         
         data = response.json()
@@ -24,7 +24,7 @@ def generate_midi_clip(prompt):
             
             # 1. Download the file from the remote server
             download_url = f"{config.MIDI_LLM_API_BASE}/download"
-            print(f"  [API] Downloading MIDI from {download_url}...", flush=True)
+            print(f"[MIDI-LLM] Success! Downloading MIDI: {remote_midi_path}", flush=True)
             
             file_response = requests.get(download_url, params={"path": remote_midi_path})
             file_response.raise_for_status()
@@ -37,7 +37,7 @@ def generate_midi_clip(prompt):
             with open(local_path, "wb") as f:
                 f.write(file_response.content)
             
-            print(f"  [API] SUCCESS: Saved to {local_path}", flush=True)
+            print(f"[MIDI-LLM] Saved locally to: {local_path}", flush=True)
             
             # Load the downloaded MIDI
             midi = pretty_midi.PrettyMIDI(local_path)
@@ -46,5 +46,5 @@ def generate_midi_clip(prompt):
             raise Exception(data.get("message", "Unknown API error"))
             
     except Exception as e:
-        print(f"  [API] FAILED: {e}", flush=True)
+        print(f"[MIDI-LLM] FAILED: {e}", flush=True)
         return None

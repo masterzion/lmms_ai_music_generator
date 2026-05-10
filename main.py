@@ -31,6 +31,13 @@ def generate_song(user_prompt, output_dir="outputs", topic_override=None):
 
     print("--- Step 2: Creating song plan ---", flush=True)
     plan = create_song_plan(expanded, genre=genre)
+    
+    # Pretty-print the plan to the console
+    import json
+    print("\n--- SONG PLAN JSON ---")
+    print(json.dumps(plan, indent=4))
+    print("--- END SONG PLAN JSON ---\n")
+
     title = plan.get("title", "untitled").replace(" ", "_")
     bpm = plan.get("bpm", 130)
     key = plan.get("key", "C minor")

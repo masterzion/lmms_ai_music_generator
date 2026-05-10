@@ -2,10 +2,12 @@ import sys
 import os
 import subprocess
 import uvicorn
-from fastapi import FastAPI
+import asyncio
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from pathlib import Path
+from starlette.concurrency import run_in_threadpool
 
 from dotenv import load_dotenv
 
@@ -30,11 +32,27 @@ def detect_hardware():
         
         if is_amd:
             print("Detected AMD GPU/Steam Deck hardware.", flush=True)
-            if "HSA_OVERRIDE_GFX_VERSION" not in os.environ:
-                print("Setting HSA_OVERRIDE_GFX_VERSION=10.3.0 for Steam Deck compatibility.", flush=True)
-                os.environ["HSA_OVERRIDE_GFX_VERSION"] = "10.3.0"
-    except Exception:
-        pass
+            
+            # VRAM Check for AMD
+            vram_limit_met = True
+            if os.path.exists("/sys/class/drm/card0/device/mem_info_vram_total"):
+                with open("/sys/class/drm/card0/device/mem_info_vram_total", "r") as f:
+                    vram_bytes = int(f.read().strip())
+                    vram_gb = vram_bytes / (1024**3)
+                    print(f"AMD VRAM: {vram_gb:.2f} GB")
+                    if vram_gb < 3.5: # 4GB-ish limit
+                        print("AMD VRAM is too low (< 4GB). Falling back to CPU mode.")
+                        vram_limit_met = False
+            
+            if vram_limit_met:
+                if "HSA_OVERRIDE_GFX_VERSION" not in os.environ:
+                    print("Setting HSA_OVERRIDE_GFX_VERSION=10.3.0 for Steam Deck compatibility.", flush=True)
+                    os.environ["HSA_OVERRIDE_GFX_VERSION"] = "10.3.0"
+            else:
+                os.environ["FORCE_CPU"] = "1"
+
+    except Exception as e:
+        print(f"Hardware detection warning: {e}")
 
 detect_hardware()
 
@@ -42,7 +60,7 @@ from contextlib import asynccontextmanager
 
 # Check for CPU override
 if os.environ.get("FORCE_CPU") == "1":
-    print("FORCE_CPU is set. Forcing PyTorch to use CPU.", flush=True)
+    print("FORCE_CPU is set or VRAM is too low. Forcing PyTorch to use CPU.", flush=True)
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
     os.environ["HIP_VISIBLE_DEVICES"] = ""
 
@@ -52,29 +70,45 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "MIDI-LL
 from generate_transformers import prepare_hf_model, generate_from_prompts_hf
 from transformers import AutoTokenizer
 
+from llm.prompt_expander import expand_prompt
+from llm.planner import create_song_plan
+from core.parser import parse_prompt
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global model, tokenizer
     print("Loading MIDI-LLM model...", flush=True)
     print(f"Using model path: {model_path}", flush=True)
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_path, 
-        pad_token="<|eot_id|>",
-        local_files_only=True
-    )
-    print("Tokenizer loaded. Loading model weights...", flush=True)
-    model = prepare_hf_model(model_path)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    print("Model loaded successfully!", flush=True)
-    yield
-    # Clean up the model and release the resources
-    print("Shutting down...", flush=True)
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_path, 
+            pad_token="<|eot_id|>",
+            local_files_only=True
+        )
+        print("Tokenizer loaded. Loading model weights...", flush=True)
+        model = prepare_hf_model(model_path)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        print("Model loaded successfully!", flush=True)
+        yield
+    finally:
+        # Clean up the model and release the resources
+        print("Shutting down and releasing resources...", flush=True)
 
 app = FastAPI(lifespan=lifespan)
 
 class GenerateRequest(BaseModel):
     prompt: str
     temperature: float = 1.0
+
+class PlanRequest(BaseModel):
+    genre: str
+    topic: str
+
+class PlanOnlyRequest(BaseModel):
+    plan: dict
+
+class FullSongRequest(BaseModel):
+    user_prompt: str # e.g. "<futurepop> neon dreams"
 
 class ConvertRequest(BaseModel):
     midi_path: str
@@ -88,30 +122,138 @@ output_dir = Path("./outputs/api_generated")
 # Removed @app.on_event("startup") def load_model()
 
 @app.post("/generate")
-def generate(req: GenerateRequest):
+async def generate(req: GenerateRequest):
     print(f"Received prompt: {req.prompt}")
     
-    stats = generate_from_prompts_hf(
-        model=model,
-        tokenizer=tokenizer,
-        prompts=[req.prompt],
-        output_dir=output_dir,
-        model_path=model_path,
-        synthesize=False,         # Generation only
-        temperature=req.temperature,
-        top_p=0.98,
-        max_tokens=2046,
-        n_outputs=1
-    )
-    
-    if stats['output_files']:
-        midi_file = stats['output_files'][0]
+    try:
+        # Run the synchronous generation in a threadpool to remain responsive
+        stats = await run_in_threadpool(
+            generate_from_prompts_hf,
+            model=model,
+            tokenizer=tokenizer,
+            prompts=[req.prompt],
+            output_dir=output_dir,
+            model_path=model_path,
+            synthesize=False,         # Generation only
+            temperature=req.temperature,
+            top_p=0.98,
+            max_tokens=2046,
+            n_outputs=1
+        )
+        
+        if stats['output_files']:
+            midi_file = stats['output_files'][0]
+            return {
+                "status": "success", 
+                "midi_path": str(midi_file)
+            }
+        else:
+            return {"status": "error", "message": "Failed to generate MIDI."}
+            
+    except asyncio.CancelledError:
+        print(f"Generation cancelled for prompt: {req.prompt}")
+        # Re-raise to allow Starlette to handle it, but we've logged it
+        raise
+    except Exception as e:
+        print(f"Error during generation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/plan")
+async def plan_song(req: PlanRequest):
+    """
+    Expands a topic and creates a full JSON song plan using Ollama.
+    """
+    print(f"Planning song for Genre: {req.genre} | Topic: {req.topic}")
+    try:
+        expanded = await run_in_threadpool(expand_prompt, req.genre, req.topic)
+        plan = await run_in_threadpool(create_song_plan, expanded, req.genre)
+        return {"status": "success", "plan": plan}
+    except Exception as e:
+        print(f"Planning error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/generate_full")
+async def generate_full(req: FullSongRequest):
+    """
+    The complete pipeline: Parse -> Expand -> Plan -> Return Plan
+    (Note: This returns the plan; the client can then call /generate for each clip)
+    """
+    print(f"Full pipeline request: {req.user_prompt}")
+    try:
+        genre, topic = parse_prompt(req.user_prompt)
+        expanded = await run_in_threadpool(expand_prompt, genre, topic)
+        plan = await run_in_threadpool(create_song_plan, expanded, genre)
         return {
-            "status": "success", 
-            "midi_path": str(midi_file)
+            "status": "success",
+            "genre": genre,
+            "topic": topic,
+            "plan": plan
         }
-    else:
-        return {"status": "error", "message": "Failed to generate MIDI."}
+    except Exception as e:
+        print(f"Pipeline error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/generate_from_plan")
+async def generate_from_plan(req: PlanOnlyRequest):
+    """
+    Takes a JSON plan and generates all MIDI clips for it.
+    """
+    plan = req.plan
+    prompts = []
+    track_info = []
+
+    print(f"Generating MIDI from plan: {plan.get('title', 'untitled')}")
+    
+    # Extract all prompts from the plan sections/tracks
+    for section in plan.get("sections", []):
+        for track in section.get("tracks", []):
+            raw_prompt = track.get("midi_prompt", "")
+            # Forensic enhancement
+            enhanced_prompt = (
+                f"{raw_prompt}. Style: {track.get('grid', '1/16 notes')}. "
+                f"Density: {track.get('density', 0.5)}. "
+                f"Max Polyphony: {track.get('polyphony', 1)}. "
+                f"Range: MIDI {track.get('pitch_range', [36, 84])}."
+            )
+            prompts.append(enhanced_prompt)
+            track_info.append({
+                "section": section.get("name"),
+                "track": track.get("name")
+            })
+
+    if not prompts:
+        return {"status": "error", "message": "No tracks found in plan."}
+
+    try:
+        # Generate all clips in batch
+        stats = await run_in_threadpool(
+            generate_from_prompts_hf,
+            model=model,
+            tokenizer=tokenizer,
+            prompts=prompts,
+            output_dir=output_dir,
+            model_path=model_path,
+            synthesize=False,
+            temperature=1.0,
+            top_p=0.98,
+            max_tokens=2046,
+            n_outputs=1
+        )
+        
+        results = []
+        for i, midi_path in enumerate(stats.get('output_files', [])):
+            results.append({
+                "info": track_info[i],
+                "midi_path": str(midi_path)
+            })
+            
+        return {
+            "status": "success",
+            "files": results
+        }
+    except Exception as e:
+        print(f"Batch generation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/convert")
 def convert(req: ConvertRequest):

@@ -7,21 +7,31 @@ MODEL = "llama3:8b"
 
 
 def ask_llm(prompt, temperature=0.1):
+    print(f"\n[Ollama] Sending request to {OLLAMA_URL}...", flush=True)
+    print(f"[Ollama] Model: {MODEL} | Temperature: {temperature}", flush=True)
+    print(f"[Ollama] Prompt length: {len(prompt)} characters", flush=True)
+    # print(f"[Ollama] FULL PROMPT:\n{prompt}\n", flush=True) # Uncomment for extreme debugging
 
-    response = requests.post(
-        OLLAMA_URL,
-        json={
-            "model": MODEL,
-            "prompt": prompt,
-            "stream": False,
-            "options": {
-                "temperature": temperature
-            }
-        },
-        timeout=600
-    )
+    try:
+        response = requests.post(
+            OLLAMA_URL,
+            json={
+                "model": MODEL,
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": temperature
+                }
+            },
+            timeout=1300
+        )
+        response.raise_for_status()
+    except Exception as e:
+        print(f"[Ollama] Request failed: {e}", flush=True)
+        return ""
 
     data = response.json()
-    print(f"Ollama API response: {data}", flush=True)
+    response_text = data.get("response", "")
+    print(f"[Ollama] RAW RESPONSE:\n{response_text}\n", flush=True)
 
-    return data.get("response", "")
+    return response_text

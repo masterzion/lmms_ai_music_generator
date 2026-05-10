@@ -12,6 +12,7 @@ def create_song_plan(expanded_prompt, genre="chillout"):
     """
     Creates a JSON song plan using Llama3, enforcing genre-specific track counts.
     """
+    print(f"\n[Planner] Starting song planning for genre: {genre}...", flush=True)
     from core.style_config import STYLE_DATA
     style_info = STYLE_DATA.get(genre, STYLE_DATA["chillout"])
     genre_conf = style_info["pipeline"]

@@ -12,26 +12,60 @@ import config
 API_URL = f"{config.MIDI_LLM_API_BASE}/generate"
 
 def send_to_api(prompt, topic, genre, output_dir):
-    payload = {
-        "prompt": prompt,
-        "temperature": 1.0,
-        "genre": genre,
-        "topic": topic
-    }
+    """
+    Implements the Plan -> Client -> Generator workflow.
+    """
+    full_url = f"{config.MIDI_LLM_API_BASE}/generate_full"
+    plan_url = f"{config.MIDI_LLM_API_BASE}/generate_from_plan"
+    download_url = f"{config.MIDI_LLM_API_BASE}/download"
     
-    print(f"--- Sending request for: {topic} ({genre}) ---")
+    print(f"\n--- STEP 1: Requesting Plan from {full_url} ---")
     try:
-        response = requests.post(API_URL, json=payload, timeout=1200)
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("status") == "success":
-                midi_path = data.get("midi_path")
-                print(f"SUCCESS: MIDI generated at {midi_path}")
-                return midi_path
-            else:
-                print(f"API ERROR: {data.get('message')}")
-        else:
-            print(f"HTTP ERROR: {response.status_code}")
+        # 1. Get the plan from the API
+        res = requests.post(full_url, json={"user_prompt": prompt}, timeout=1200)
+        res.raise_for_status()
+        plan_data = res.json()
+        
+        if plan_data.get("status") != "success":
+            print(f"PLAN ERROR: {plan_data.get('message')}")
+            return None
+            
+        plan = plan_data["plan"]
+        print(f"SUCCESS: Plan received for '{plan.get('title')}'")
+        
+        # 2. Send the plan back to the generator for MIDI creation
+        print(f"--- STEP 2: Sending Plan to Generator at {plan_url} ---")
+        gen_res = requests.post(plan_url, json={"plan": plan}, timeout=1200)
+        gen_res.raise_for_status()
+        gen_data = gen_res.json()
+        
+        if gen_data.get("status") != "success":
+            print(f"GENERATION ERROR: {gen_data.get('message')}")
+            return None
+            
+        # 3. Download the generated files
+        print(f"--- STEP 3: Downloading {len(gen_data['files'])} MIDI files ---")
+        safe_genre = genre.lower().strip()
+        safe_topic = topic.lower().strip()
+        target_dir = os.path.join(output_dir, safe_genre, safe_topic)
+        os.makedirs(target_dir, exist_ok=True)
+        
+        downloaded_paths = []
+        for file_entry in gen_data["files"]:
+            remote_path = file_entry["midi_path"]
+            info = file_entry["info"]
+            
+            dl_res = requests.get(download_url, params={"path": remote_path})
+            if dl_res.status_code == 200:
+                local_filename = f"{info['section']}_{info['track']}_{int(time.time())}.mid".replace(" ", "_")
+                local_path = os.path.join(target_dir, local_filename)
+                with open(local_path, "wb") as f:
+                    f.write(dl_res.content)
+                print(f"  SAVED: {local_path}")
+                downloaded_paths.append(local_path)
+        
+        return downloaded_paths
+
     except Exception as e:
         print(f"CONNECTION ERROR: {e}")
     return None
