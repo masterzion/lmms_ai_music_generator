@@ -1,128 +1,262 @@
 # Professional AI Music Generator Documentation
 
-This repository contains a high-end, genre-aware AI music generation pipeline. It supports distributed processing using a FastAPI server (for MIDI generation) and a Batch Client (for automated song production).
+This repository contains a genre-aware AI music generation pipeline. It uses **NotaGen** (a hierarchical GPT-2 symbolic music model) for melodic tracks, a deterministic rule-based engine for drum/percussion tracks, and an Ollama LLM for song planning and structure. The API server and Batch Client work together for automated, multi-track MIDI production.
 
 ## 1. System Architecture
 
-The system is divided into four main layers:
-- **API (Server)**: Orchestrates the LLM and deterministic generators.
-- **Batch Client**: Handles mass production and research-backed prompt expansion.
-- **Generators**: Style-specific MIDI engines (Drums, Bass, Pianos, Pads).
-- **Exporter**: Converts final MIDI files into LMMS projects (.mmpz).
-
----
-
-## 2. The API (MIDI-LLM)
-
-The API is the central hub for generating songs. It includes **Automatic Hardware Detection** for Steam Deck/AMD hardware.
-
-### Running the API
-```bash
-./venv/bin/python midi_llm_api.py
 ```
-*Note: The API now defaults to port **9000** to avoid conflicts and includes automatic setup of GFX overrides for Steam Deck.*
-
-### Hardware Support
-- **NVIDIA**: Automatic CUDA acceleration.
-- **Steam Deck / AMD**: Automatic hardware detection. If detected, it applies `HSA_OVERRIDE_GFX_VERSION=10.3.0` and optimizes loading for the 16GB RAM environment.
-- **CPU Fallback**: Uses optimized `float32` precision for stable, high-quality generation on systems without a supported GPU.
-
-### Features
-- **JSON Repair**: Robust regex-based repair for LLM-generated JSON, automatically handling unquoted note names (e.g., `[C1, C2]`) and converting them to MIDI integers.
-- **Lifespan Management**: Uses modern FastAPI lifespan handlers for reliable model loading/unloading.
-
----
-
-## 3. The Main Entry Point
-
-Generate a complete song from a single command:
-```bash
-./venv/bin/python main.py --prompt "<futurepop> Neon Dreams"
+┌─────────────────────────────────────────────────────────────┐
+│  Batch Client (api_batch_client.py)                          │
+│  Reads songs_to_generate.txt → requests plan → requests MIDI │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ HTTP (port 9000)
+┌───────────────────────────▼─────────────────────────────────┐
+│  API Server (midi_llm_api.py)                                │
+│  ├── /generate_full   → Ollama LLM → JSON song plan          │
+│  ├── /generate_from_plan → NotaGen + Drum Generator → MIDI   │
+│  ├── /convert         → FluidSynth → WAV                     │
+│  └── /download        → file download                        │
+└──────┬──────────────────────┬───────────────────────────────┘
+       │                      │
+┌──────▼──────┐   ┌───────────▼──────────┐
+│  NotaGen    │   │  Drum Generator       │
+│  (notagen/  │   │  (notagen/            │
+│  notagen_   │   │  drum_generator.py)   │
+│  backend.py)│   │  Rule-based, poly=1   │
+│  110M params│   │  guaranteed           │
+│  CPU only   │   └──────────────────────┘
+└──────┬──────┘
+       │ ABC notation
+┌──────▼──────────────────────┐
+│  abc_to_midi.py              │
+│  Deterministic polyphony     │
+│  enforcement + MIDI write    │
+└─────────────────────────────┘
 ```
 
-### Duration Control
-The system enforces a target duration of **4:00 to 6:30 minutes**. 
-- **Dynamic Bar Calculation**: Bar counts are automatically adjusted based on genre and BPM:
-    - **Futurepop**: 220–360 bars (at 240+ BPM).
-    - **EBM**: 128–180 bars (at 120 BPM).
-    - **Chillout**: 100–160 bars (at 90 BPM).
-
 ---
 
-## 4. The Batch Client (Mass Production)
+## 2. Prerequisites
 
-The batch client automates the production of multiple songs based on a list.
-
-### Usage
-1. Edit `batch_client/songs_to_generate.txt` with your desired songs (format: `genre:topic:prompt`).
-2. Run the processor:
-   ```bash
-   ./venv/bin/python batch_client/batch_processor.py
-   ```
-
-### Key Features
-- **Dynamic Pacing**: Automatically adjusts bar counts (4:00 - 6:30 min).
-- **Universal Drops**: Implements random section-level drops for all tracks.
-- **One-Time Drops**: Ensures each instrument only "drops out" once per song.
-
----
-
-## 4. Generative Engines (High-End Logic)
-
-### Style Secrets
-- **EBM**: 16th-note driving bass with octave jumps and dissonant piano solos.
-- **Futurepop**: Sidechained "pumping" bass and anthem-like super-saw arpeggios.
-- **Chillout**: Open Jazz voicings (Drop-2), 9th/11th extensions, and sparse motifs.
-
-### Humanization
-The system automatically applies +/- 7.5ms micro-timing jitter and velocity fluctuations to make the MIDI feel like a professional human performance.
-
----
-
-## 5. Exporter (LMMS Integration)
-
-The exporter allows you to move your AI-generated MIDI into a professional DAW (LMMS).
-
-### Usage
+### System packages
 ```bash
-./venv/bin/python exporter/midi_to_lmms.py <path_to_midi_file>
+# FluidSynth (for WAV rendering)
+sudo apt install fluidsynth
+
+# abc2midi (optional — used by abctoolkit)
+sudo apt install abcmidi
 ```
 
-### Routing
-- **Drums/Percussion**: Automatically routed to the Beat/Baseline Editor.
-- **Instrument Tracks**: Automatically assigned to SF2 or VST3 players based on configuration.
+### Python environment
+```bash
+# Create and activate virtualenv
+python3 -m venv venv
+source venv/bin/activate
+
+# Install all Python dependencies
+pip install -r requirements.txt
+pip install music21 abctoolkit==0.0.6 samplings==0.1.7
+```
+
+### External services
+- **Ollama** running at the URL configured in `config.py` → `OLLAMA_API_BASE`
+  - Required model: whichever model your `llm/planner.py` references (e.g. `mistral`, `llama3`)
 
 ---
 
-## 6. Command Line Tools
+## 3. First-Time Model Setup
 
-- **`download_model.py`**: Downloads the 4GB MIDI-LLM model with parallel threading (8 workers).
-- **`analyze_midi.py`**: Provides a detailed breakdown of tracks and note counts for any generated file.
-- **`setup_system.sh`**: One-click installer for all dependencies and virtual environments.
+The NotaGen-small model weights (~1.32 GB) are downloaded automatically on first startup if not present. To pre-download manually:
 
----
+```bash
+source venv/bin/activate
+python3 -c "
+from huggingface_hub import hf_hub_download
+hf_hub_download(
+    repo_id='ElectricAlexis/NotaGen',
+    filename='weights_notagen_pretrain_p_size_16_p_length_2048_p_layers_12_c_layers_3_h_size_768_lr_0.0002_batch_8.pth',
+    local_dir='models/NotaGen-small'
+)
+print('Done.')
+"
+```
 
-## 7. Configuration (`config.py`)
-
-The `config.py` file is the brain of the system, controlling the "Production Standards" for every genre.
-
-### Global Settings
-- **`MIDI_LLM_API_BASE`**: The URL of your local or remote MIDI-LLM server.
-- **`OLLAMA_API_BASE`**: The URL of your Ollama server.
-
-### Genre Parameters
-Each genre has a dedicated configuration block:
-- **`bpm`**: The valid tempo range for the genre.
-- **`min_tracks` / `max_tracks`**: Mandatory track counts for a professional "Wall of Sound."
-- **`min_bars` / `max_bars`**: Enforces the 4:00 - 6:30 minute duration window.
-- **`minor_only`**: Forces the generator to use minor scales (Essential for EBM).
-- **`melody_density`**: Controls how many notes the AI melody generator produces (0.1 to 1.0).
-- **`drum_density`**: Controls the complexity of the drum patterns.
-- **`humanization`**: The base level of timing/velocity jitter applied before the cleanup stage.
-- **`bass_repetition`**: Controls how often the bass pattern repeats vs. evolves.
+The NotaGen source code is bundled at `NotaGen-repo/` (cloned from GitHub). No additional setup is needed for it.
 
 ---
 
-## 8. Development & Git
-- **Branches**: Use the `new_version` branch for the latest high-end features.
-- **Ignoring Binaries**: The project is configured to ignore `**/outputs/`, `models/`, and all `*.mid`/`*.wav` files to keep the repository lightweight.
+## 4. Running the API Server
+
+```bash
+source venv/bin/activate
+python3 midi_llm_api.py
+```
+
+The server starts on **port 9000**. On startup it:
+1. Detects AMD/GPU hardware and applies overrides if needed
+2. Loads NotaGen-small (110M params, ~1.5 GB RAM) onto CPU
+3. Restores all project config cleanly (Ollama URL, output paths, etc.)
+
+Expected startup output:
+```
+Loading NotaGen-small model from 'models/NotaGen-small'...
+  [NotaGen] Model parameters: 109,579,776
+  [NotaGen] Model loaded on CPU.
+NotaGen model loaded successfully!
+INFO:     Uvicorn running on http://0.0.0.0:9000
+```
+
+### Environment overrides
+| Variable | Default | Description |
+|---|---|---|
+| `NOTAGEN_MODEL_PATH` | `models/NotaGen-small` | Path to weights directory |
+| `MAX_PARALLEL_TRACKS` | `2` | Reserved (generation is sequential on CPU) |
+| `PIPEWIRE_LOG_LEVEL` | `0` | Suppresses FluidSynth audio warnings |
+
+---
+
+## 5. API Endpoints
+
+### `POST /generate_full`
+Plans a full song from a natural language prompt. Calls the Ollama LLM.
+```bash
+curl -X POST http://localhost:9000/generate_full \
+  -H "Content-Type: application/json" \
+  -d '{"user_prompt": "<ebm> Black Market Memories"}'
+```
+Returns: `{"status": "success", "genre": "ebm", "topic": "...", "plan": {...}}`
+
+### `POST /generate_from_plan`
+Generates all MIDI tracks from a JSON plan (produced by `/generate_full`).
+- Melodic tracks → NotaGen ABC generation → deterministic polyphony enforcement
+- Drum/percussion tracks → rule-based pattern generator (polyphony = 1, always)
+- All tracks merged into one multi-track `.mid` file
+```bash
+curl -X POST http://localhost:9000/generate_from_plan \
+  -H "Content-Type: application/json" \
+  -d '{"plan": <plan_json>}'
+```
+Returns: `{"status": "success", "midi_path": "...", "track_count": N}`
+
+### `POST /generate`
+Test endpoint — generate a single 8-bar MIDI clip from a raw NotaGen prompt.
+```bash
+curl -X POST http://localhost:9000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Romantic|Chopin, Frédéric|solo piano"}'
+```
+Prompt format: `"Period|Composer|Instrumentation"`
+
+### `POST /convert`
+Render a MIDI file to WAV using FluidSynth.
+```bash
+curl -X POST http://localhost:9000/convert \
+  -H "Content-Type: application/json" \
+  -d '{"midi_path": "outputs/api_generated/mysong_merged.mid"}'
+```
+
+### `GET /download`
+Download any generated file by server path.
+```bash
+curl "http://localhost:9000/download?path=outputs/api_generated/mysong_merged.mid" \
+  -o mysong.mid
+```
+
+---
+
+## 6. Running the Batch Client
+
+The batch client automates mass production from a playlist file. The API server **must be running** first.
+
+```bash
+source venv/bin/activate
+python3 batch_client/api_batch_client.py --file batch_client/songs_to_generate.txt
+```
+
+To filter by genre:
+```bash
+python3 batch_client/api_batch_client.py --file batch_client/songs_to_generate.txt --type ebm
+```
+
+### Playlist file format (`songs_to_generate.txt`)
+```
+<genre>: <topic>: <natural language prompt>
+```
+Example:
+```
+<ebm>: Black Market Memories: Dark industrial groove with pounding bass and mechanical drums
+<futurepop>: Neon Dreams: Uplifting anthem with super-saw leads and emotional chord progressions
+```
+
+Output files are saved to `batch_client/outputs/<genre>/<topic>/`.
+
+---
+
+## 7. Exporter (LMMS Integration)
+
+Convert any generated MIDI into an LMMS project:
+```bash
+source venv/bin/activate
+python3 exporter/midi_to_lmms.py <path_to_midi_file>
+```
+
+- **Drums/Claps/Snares** → Beat/Baseline Editor (automatic detection)
+- **Instrument tracks** → SF2 player or VST3 (configurable)
+
+---
+
+## 8. Configuration
+
+### `config.py`
+| Key | Description |
+|---|---|
+| `MIDI_LLM_API_BASE` | URL of the API server (default: `http://127.0.0.1:9000`) |
+| `OLLAMA_API_BASE` | URL of your Ollama instance |
+| `OUTPUT_DIR` | Root directory for all generated files |
+| `SOUNDFONT_PATH` | Path to the GM soundfont for FluidSynth rendering |
+
+### `core/style_config.py`
+All genre-level parameters — polyphony limits, BPM ranges, section densities, track counts, humanization. These flow automatically into every generation request via the API.
+
+### `core/structures.py`
+Song structure templates per genre (section names, ordering patterns).
+
+---
+
+## 9. Polyphony Guarantee
+
+Unlike the previous MIDI-LLM backend (which used a logits processor that could still fail after 12 attempts), polyphony is now **100% deterministically enforced**:
+
+- **Drum tracks**: Rule-based generator never exceeds 1 simultaneous note by construction.
+- **Melodic tracks**: After ABC→MIDI conversion, a Python sort-and-slice enforces the limit. Mathematically impossible to violate.
+
+The API logs a full polyphony audit after every `/generate_from_plan` call:
+```
+[API] Polyphony Audit:
+  ✓ Clap: 1/1 simultaneous notes
+  ✓ Bass: 2/4 simultaneous notes
+  ✓ Lead: 3/4 simultaneous notes
+```
+
+---
+
+## 10. Hardware Notes
+
+| Setup | Behaviour |
+|---|---|
+| **CPU only** (default) | NotaGen runs in `float32`. ~2–5 min per melodic track on a 4-core CPU. |
+| **AMD GPU** | Hardware detected automatically; `HSA_OVERRIDE_GFX_VERSION=10.3.0` applied. |
+| **RAM requirement** | ~2 GB for NotaGen-small. 8 GB total system RAM minimum recommended. |
+
+> NotaGen-small (110M params) was chosen specifically for CPU viability on a 12 GB RAM / 4-core system.
+> NotaGen-medium (244M) or NotaGen-large (516M) can be used by changing `size="small"` to `size="medium"/"large"` in the lifespan loader and pointing `NOTAGEN_MODEL_PATH` to the corresponding weights file.
+
+---
+
+## 11. Development Notes
+
+- `NotaGen-repo/` — cloned GitHub source for the NotaGen model classes. Do not modify.
+- `notagen/` — integration layer: backend, ABC→MIDI converter, drum generator.
+- `MIDI-LLM/` — legacy backend, no longer used by the API. Kept for reference.
+- **Branches**: Use `new_version` for the latest features.
+- **Git ignores**: `outputs/`, `models/`, `*.mid`, `*.wav`, `NotaGen-repo/` are excluded from tracking.

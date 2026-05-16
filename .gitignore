@@ -12,3 +12,6 @@ models/
 MIDI-LLM
 soundfonts
 soundfonts/FluidR3_GM.sf2
+
+# NotaGen cloned repo (external dependency)
+NotaGen-repo/
