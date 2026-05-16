@@ -5,6 +5,7 @@ import asyncio
 import time
 import json
 import subprocess
+import argparse
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -17,6 +18,13 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+
+# --- Command Line Arguments ---
+parser = argparse.ArgumentParser(description="Orpheus Music API")
+parser.add_argument("--fp16", action="store_true", help="Use FP16 precision (Recommended for Steam Deck/GPUs)")
+parser.add_argument("--port", type=int, default=9000, help="API Port")
+parser.add_argument("--host", type=str, default="0.0.0.0", help="API Host")
+args, unknown = parser.parse_known_args()
 
 # Settings
 ORPHEUS_MODEL_PATH = os.environ.get("ORPHEUS_MODEL_PATH", "models/Orpheus-Large/orpheus_large.pth")
@@ -41,9 +49,9 @@ async def lifespan(app: FastAPI):
     global backend
     print(f"\n[API] Initializing ORPHEUS-LARGE (748M) from '{ORPHEUS_MODEL_PATH}'...", flush=True)
     try:
-        backend = OrpheusBackend(ORPHEUS_MODEL_PATH)
+        backend = OrpheusBackend(ORPHEUS_MODEL_PATH, use_fp16=args.fp16)
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        print("[API] Orpheus engine ready.", flush=True)
+        print(f"[API] Orpheus engine ready. (Precision: {'FP16' if args.fp16 else 'FP32'})", flush=True)
         yield
     except Exception as e:
         print(f"[API] CRITICAL ERROR loading Orpheus: {e}")
@@ -100,8 +108,7 @@ async def generate_from_plan(req: PlanOnlyRequest):
     valid_results = []
     for t in tasks:
         print(f"[API] Generating {t['name']} with Orpheus...", flush=True)
-        # Seed tokens: Start with a pitch (D#0=15) and a velocity (128+100)
-        seed = [512, 15, 128+100] 
+        seed = [512, 15, 128+100, 100] # Standard 4-token seed
         
         try:
             tokens = await run_in_threadpool(backend.generate, prompt_tokens=seed, max_len=256)
@@ -114,10 +121,8 @@ async def generate_from_plan(req: PlanOnlyRequest):
     if not valid_results:
         return {"status": "error", "message": "No tracks generated."}
 
-    # ── Merge into a single MIDI (required by batch_client) ──────────────────
+    # Merge Logic
     merged_midi = pretty_midi.PrettyMIDI(initial_tempo=bpm)
-    
-    # Pre-populate instruments
     instr_map = {}
     for i, t_def in enumerate(plan.get("sections", [{}])[0].get("tracks", [])):
         is_d = bool(t_def.get("is_drum", False))
@@ -128,20 +133,18 @@ async def generate_from_plan(req: PlanOnlyRequest):
 
     for res in valid_results:
         try:
-            clip = pretty_midi.PrettyMIDI(str(res["path"]))
+            clip = pretty_midi.PrettyMIDI(str(res["out_path"]))
             target = instr_map.get(res["id"])
             if not target: continue
-            
             for inst in clip.instruments:
                 for note in inst.notes:
-                    if note.start < res["duration"]:
-                        new_note = pretty_midi.Note(
-                            velocity=min(127, int(note.velocity * (velocity_base/100.0))),
-                            pitch=note.pitch,
-                            start=res["start_time"] + note.start,
-                            end=min(res["start_time"] + note.end, res["start_time"] + res["duration"])
-                        )
-                        target.notes.append(new_note)
+                    new_note = pretty_midi.Note(
+                        velocity=min(127, int(note.velocity * (velocity_base/100.0))),
+                        pitch=note.pitch,
+                        start=res["start_time"] + note.start,
+                        end=res["start_time"] + note.end
+                    )
+                    target.notes.append(new_note)
         except: continue
 
     safe_title = plan.get("title", "song").replace(" ", "_")
@@ -152,13 +155,10 @@ async def generate_from_plan(req: PlanOnlyRequest):
 
 @app.post("/convert")
 async def convert_midi(req: ConvertRequest):
-    """Converts MIDI to WAV using FluidSynth (required by batch_client)."""
     if not os.path.exists(req.midi_path):
         raise HTTPException(status_code=404, detail="MIDI file not found")
-    
     wav_path = req.midi_path.replace(".mid", ".wav")
     try:
-        # fluidsynth -ni -F output.wav soundfont.sf2 input.mid
         cmd = ["fluidsynth", "-ni", "-F", wav_path, SOUNDFONT_PATH, req.midi_path]
         subprocess.run(cmd, check=True, capture_output=True)
         return {"status": "success", "wav_path": wav_path}
@@ -178,4 +178,4 @@ async def download_file(path: str):
     raise HTTPException(status_code=404, detail="File not found")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=9000)
+    uvicorn.run(app, host=args.host, port=args.port)

@@ -96,10 +96,11 @@ class OrpheusTransformer(nn.Module):
 # ── Orpheus Backend ───────────────────────────────────────────────────────────
 
 class OrpheusBackend:
-    def __init__(self, model_path: str):
-        print(f"  [Orpheus] Initializing from {model_path}...", flush=True)
+    def __init__(self, model_path: str, use_fp16: bool = False):
+        print(f"  [Orpheus] Initializing from {model_path} (FP16: {use_fp16})...", flush=True)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = OrpheusTransformer().to(self.device)
+        self.dtype = torch.float16 if use_fp16 else torch.float32
+        self.model = OrpheusTransformer().to(self.device).to(self.dtype)
         
         try:
             state_dict = torch.load(model_path, map_location=self.device)
