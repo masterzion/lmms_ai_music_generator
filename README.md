@@ -45,6 +45,14 @@ pip install torch transformers pretty_midi mido
 - **Storage**: ~3GB for model weights.
 - **CPU**: Multicore recommended for parallel track rendering.
 
+### Manual Model Download
+If the model weights are missing, you can download them manually using `curl`:
+
+```bash
+mkdir -p models/Orpheus-Large
+curl -L https://huggingface.co/asigalov61/Orpheus-Music-Transformer/resolve/main/Orpheus_Large_748M_2048_16_24_1536_32768_p_size_1_p_length_32768_p_layers_1_lr_0.0001_batch_1.pth -o models/Orpheus-Large/orpheus_large.pth
+```
+
 ## 4. Running the System
 
 ### Start the API Server
