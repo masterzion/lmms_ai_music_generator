@@ -78,7 +78,14 @@ async def generate_from_plan(req: PlanOnlyRequest):
     global backend
     plan = req.plan
     genre = plan.get("genre", "ebm").lower()
-    bpm  = float(plan.get("bpm", 140))
+    
+    # BPM Sanity Check (Avoid ZeroDivisionError)
+    raw_bpm = plan.get("bpm", 140)
+    try:
+        bpm = float(raw_bpm)
+        if bpm <= 0: bpm = 120.0
+    except:
+        bpm = 120.0
     
     style_cfg = STYLE_DATA.get(genre, STYLE_DATA.get("ebm", {}))
     velocity_base = style_cfg.get("pipeline", {}).get("velocity_base", 90)
